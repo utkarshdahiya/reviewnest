@@ -1,0 +1,83 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// Note that some adapters may set a maximum length for the String type by default, please ensure your strings are long
+// enough when changing adapters.
+// See https://www.prisma.io/docs/orm/reference/prisma-schema-reference#string for more information
+datasource db {
+  provider = "sqlite"
+  url      = "file:dev.sqlite"
+}
+
+model Session {
+  id            String    @id
+  shop          String
+  state         String
+  isOnline      Boolean   @default(false)
+  scope         String?
+  expires       DateTime?
+  accessToken   String
+  userId        BigInt?
+  firstName     String?
+  lastName      String?
+  email         String?
+  accountOwner  Boolean   @default(false)
+  locale        String?
+  collaborator  Boolean?  @default(false)
+  emailVerified Boolean?  @default(false)
+  refreshToken        String?
+  refreshTokenExpires DateTime?
+}
+
+model Review {
+  id          String   @id @default(cuid())
+  shop        String
+  productId   String
+  authorName  String
+  rating      Int
+  title       String?
+  body        String
+  status      String   @default("pending")
+  imageUrl    String?
+  videoUrl    String?
+  createdAt   DateTime @default(now())
+}
+model ShopSettings {
+  shop        String   @id
+  allowPhoto  Boolean  @default(false)
+  allowVideo  Boolean  @default(false)
+}
+
+model ReviewRequest {
+  id          String   @id @default(cuid())
+  shop        String
+  orderId     String
+  productId   String
+  productTitle String
+  customerEmail String
+  customerName  String
+  sendAfter   DateTime   // when it's eligible to send
+  sentAt      DateTime?  // null = not sent yet
+  createdAt   DateTime @default(now())
+
+  @@index([shop, sentAt, sendAfter])
+}
+
+model Question {
+  id           String   @id @default(cuid())
+  shop         String
+  productId    String
+  authorName   String
+  questionText String
+  answerText   String?
+  status       String   @default("pending") // pending | answered | rejected
+  createdAt    DateTime @default(now())
+}
+ 
+
+
+

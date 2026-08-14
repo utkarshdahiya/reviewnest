@@ -1,7 +1,8 @@
 # Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
 
 client_id = "22215140b5ec94721ab323eecabef272"
-application_url = "https://example.com"
+application_url = "https://reviewnest-8612.onrender.com"
+
 embedded = true
 name = "reviewnest"
 
@@ -37,18 +38,23 @@ type = "multi_line_text_field"
 api_version = "2026-10"
 
   [[webhooks.subscriptions]]
-  uri = "/webhooks/app/uninstalled"
-  topics = [ "app/uninstalled" ]
+  uri = "/webhooks/customers/data_request"
+  topics = [ "customers/data_request" ]
+  compliance_topics = [ "customers/data_request" ]
 
   [[webhooks.subscriptions]]
-  uri = "/webhooks/app/scopes_update"
-  topics = [ "app/scopes_update" ]
+  uri = "/webhooks/customers/redact"
+  topics = [ "customers/redact" ]
+  compliance_topics = [ "customers/redact" ]
+
   [[webhooks.subscriptions]]
-  uri = "/webhooks/orders/fulfilled"
-  topics = [ "orders/fulfilled" ]
+  uri = "/webhooks/shop/redact"
+  topics = [ "shop/redact" ]
+  compliance_topics = [ "shop/redact" ]
 
 [auth]
-redirect_urls = [ "https://example.com/api/auth" ]
+redirect_urls = [ "https://reviewnest-8612.onrender.com/api/auth" ]
+
 
 [build]
 include_config_on_deploy = true

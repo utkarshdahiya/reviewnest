@@ -3,7 +3,7 @@ services:
     name: reviewnest
     runtime: node
     plan: free
-    buildCommand: npm install && npm run build && npx prisma migrate deploy
+    buildCommand: npm install && npm run build && npx prisma db push --skip-generate && npx prisma generate
     startCommand: npm run start
     envVars:
       - key: NODE_ENV

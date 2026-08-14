@@ -22,3 +22,6 @@ services:
         sync: false
       - key: DATABASE_URL
         sync: false
+        fromDatabase:
+          name: reviewnest-db
+          property: connectionString

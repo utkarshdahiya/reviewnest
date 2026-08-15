@@ -39,17 +39,14 @@ api_version = "2026-10"
 
   [[webhooks.subscriptions]]
   uri = "/webhooks/customers/data_request"
-  topics = [ "customers/data_request" ]
   compliance_topics = [ "customers/data_request" ]
 
   [[webhooks.subscriptions]]
   uri = "/webhooks/customers/redact"
-  topics = [ "customers/redact" ]
   compliance_topics = [ "customers/redact" ]
 
   [[webhooks.subscriptions]]
   uri = "/webhooks/shop/redact"
-  topics = [ "shop/redact" ]
   compliance_topics = [ "shop/redact" ]
 
 [auth]
@@ -57,5 +54,4 @@ redirect_urls = [ "https://reviewnest-8612.onrender.com/api/auth" ]
 
 
 [build]
-include_config_on_deploy = true
 automatically_update_urls_on_dev = true

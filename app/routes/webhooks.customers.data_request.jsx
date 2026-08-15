@@ -1,21 +1,26 @@
-import { json } from "@remix-run/node";
 import { authenticate } from "../shopify.server";
-import prisma from "../db.server";
+import db from "../db.server";
 
+// Shopify requires this webhook so a merchant can respond to a customer's
+// request to see what data the app has stored about them.
+// We don't auto-return the data to Shopify — we log it so the merchant
+// can manually fulfill the request within Shopify's required window.
 export const action = async ({ request }) => {
-  const { shop, topic } = await authenticate.webhook(request);
+  const { shop, payload, topic } = await authenticate.webhook(request);
 
-  console.log(`[GDPR] Received ${topic} for shop: ${shop}`);
+  console.log(`Received ${topic} webhook for ${shop}`);
 
-  if (topic === "customers/data_request") {
-    const reviews = await prisma.review.findMany({ where: { shop } });
-    const questions = await prisma.question.findMany({ where: { shop } });
+  const customerEmail = payload.customer?.email;
 
-    console.log(`[GDPR] Data request for ${shop}:`, {
-      reviewsCount: reviews.length,
-      questionsCount: questions.length,
-    });
-  }
+  const matchingRequests = customerEmail
+    ? await db.reviewRequest.findMany({
+        where: { shop, customerEmail },
+      })
+    : [];
 
-  return json({ success: true });
+  console.log(
+    `Data request for customer ${customerEmail} on ${shop}: found ${matchingRequests.length} matching ReviewRequest record(s).`
+  );
+
+  return new Response();
 };

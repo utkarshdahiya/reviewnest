@@ -1,21 +1,21 @@
-import { json } from "@remix-run/node";
 import { authenticate } from "../shopify.server";
-import prisma from "../db.server";
+import db from "../db.server";
 
+// Shopify calls this 48 hours after an app is uninstalled — all shop data
+// must be deleted, not just the session (webhooks.app.uninstalled.jsx
+// only clears sessions; this clears everything else).
 export const action = async ({ request }) => {
   const { shop, topic } = await authenticate.webhook(request);
 
-  console.log(`[GDPR] Received ${topic} for shop: ${shop}`);
+  console.log(`Received ${topic} webhook for ${shop}`);
 
-  if (topic === "shop/redact") {
-    await prisma.review.deleteMany({ where: { shop } });
-    await prisma.question.deleteMany({ where: { shop } });
-    await prisma.reviewRequest.deleteMany({ where: { shop } });
-    await prisma.shopSettings.deleteMany({ where: { shop } });
-    await prisma.session.deleteMany({ where: { shop } });
+  await db.review.deleteMany({ where: { shop } });
+  await db.question.deleteMany({ where: { shop } });
+  await db.reviewRequest.deleteMany({ where: { shop } });
+  await db.shopSettings.deleteMany({ where: { shop } });
+  await db.session.deleteMany({ where: { shop } });
 
-    console.log(`[GDPR] Deleted all data for shop: ${shop}`);
-  }
+  console.log(`All data for ${shop} has been deleted per shop/redact.`);
 
-  return json({ success: true });
+  return new Response();
 };

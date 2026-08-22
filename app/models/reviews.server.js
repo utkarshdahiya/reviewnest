@@ -1,4 +1,5 @@
 import db from "../db.server";
+import { uploadBase64ToR2 } from "../utils/r2.server";
 
 export async function getReviewsForShop(shop) {
   return db.review.findMany({
@@ -15,6 +16,9 @@ export async function getApprovedReviewsForProduct(shop, productId) {
 }
 
 export async function createReview({ shop, productId, authorName, rating, title, body, imageUrl, videoUrl }) {
+  const uploadedImageUrl = await uploadBase64ToR2(imageUrl, `${shop}/reviews/images`);
+  const uploadedVideoUrl = await uploadBase64ToR2(videoUrl, `${shop}/reviews/videos`);
+
   return db.review.create({
     data: {
       shop,
@@ -24,8 +28,8 @@ export async function createReview({ shop, productId, authorName, rating, title,
       title,
       body,
       status: "pending",
-      imageUrl: imageUrl || null,
-      videoUrl: videoUrl || null,
+      imageUrl: uploadedImageUrl,
+      videoUrl: uploadedVideoUrl,
     },
   });
 }

@@ -1,7 +1,7 @@
 # Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
 
 client_id = "22215140b5ec94721ab323eecabef272"
-application_url = "https://reviewnest-8612.onrender.com"
+application_url = "https://reviewnest-app.onrender.com"
 
 embedded = true
 name = "reviewnest"
@@ -50,7 +50,7 @@ api_version = "2026-10"
   compliance_topics = [ "shop/redact" ]
 
 [auth]
-redirect_urls = [ "https://reviewnest-8612.onrender.com/api/auth" ]
+redirect_urls = [ "https://reviewnest-app.onrender.com/api/auth" ]
 
 
 [build]

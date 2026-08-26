@@ -28,10 +28,6 @@
         <label class="rn-media-label">Add a photo (optional)</label>
         <input type="file" name="photo" accept="image/*" class="rn-file-input" />
       </div>
-      <div id="rn-video-field" class="rn-media-field" style="display:none;">
-        <label class="rn-media-label">Add a short video (optional, max 10MB)</label>
-        <input type="file" name="video" accept="video/*" class="rn-file-input" />
-      </div>
 
       <button type="submit" class="rn-button">Submit review</button>
     </form>
@@ -81,13 +77,13 @@
   .rn-button { align-self: flex-start; background: #202223; color: #fff; border: none; border-radius: 8px; padding: 12px 24px; font-size: 14px; font-weight: 600; cursor: pointer; }
   .rn-button:hover { background: #000; }
   .rn-qa-section { margin-top: 40px; }
-.rn-qa-title { font-size: 20px; font-weight: 600; color: #202223; margin-bottom: 16px; }
-.rn-qa-list { margin-bottom: 24px; }
-.rn-qa-item { padding: 16px 0; border-bottom: 1px solid #e3e3e3; }
-.rn-qa-item:last-child { border-bottom: none; }
-.rn-qa-question { font-weight: 600; color: #202223; margin-bottom: 6px; }
-.rn-qa-answer { color: #4a4a4a; line-height: 1.5; padding-left: 12px; border-left: 2px solid #e3e3e3; }
-.rn-qa-empty { color: #6b6b6b; margin-bottom: 16px; }
+  .rn-qa-title { font-size: 20px; font-weight: 600; color: #202223; margin-bottom: 16px; }
+  .rn-qa-list { margin-bottom: 24px; }
+  .rn-qa-item { padding: 16px 0; border-bottom: 1px solid #e3e3e3; }
+  .rn-qa-item:last-child { border-bottom: none; }
+  .rn-qa-question { font-weight: 600; color: #202223; margin-bottom: 6px; }
+  .rn-qa-answer { color: #4a4a4a; line-height: 1.5; padding-left: 12px; border-left: 2px solid #e3e3e3; }
+  .rn-qa-empty { color: #6b6b6b; margin-bottom: 16px; }
 </style>
 
 <script>
@@ -95,7 +91,7 @@
     const widget = document.getElementById("review-widget");
     const shop = widget.dataset.shop;
     const productId = widget.dataset.productId;
-    const apiBase = "https://reviewnest-app.onrender.com/api/reviews";
+    const apiBase = "https://reviewnest-production.up.railway.app/api/reviews";
 
     function fileToBase64(file) {
       return new Promise((resolve, reject) => {
@@ -110,7 +106,6 @@
       .then((res) => res.json())
       .then((data) => {
         if (data.settings.allowPhoto) document.getElementById("rn-photo-field").style.display = "flex";
-        if (data.settings.allowVideo) document.getElementById("rn-video-field").style.display = "flex";
 
         if (data.summary.count === 0) {
           document.getElementById("review-summary").innerText = "No reviews yet";
@@ -123,10 +118,9 @@
         document.getElementById("review-list").innerHTML = data.reviews
           .map((r) => {
             let media = "";
-            if (r.imageUrl || r.videoUrl) {
+            if (r.imageUrl) {
               media = `<div class="rn-review-media">
-                ${r.imageUrl ? `<img src="${r.imageUrl}" alt="Review photo" />` : ""}
-                ${r.videoUrl ? `<video src="${r.videoUrl}" controls></video>` : ""}
+                <img src="${r.imageUrl}" alt="Review photo" />
               </div>`;
             }
             return `
@@ -149,20 +143,10 @@
       const form = new FormData(e.target);
 
       let imageUrl = null;
-      let videoUrl = null;
 
       const photoFile = form.get("photo");
       if (photoFile && photoFile.size > 0) {
         imageUrl = await fileToBase64(photoFile);
-      }
-
-      const videoFile = form.get("video");
-      if (videoFile && videoFile.size > 0) {
-        if (videoFile.size > 10 * 1024 * 1024) {
-          alert("That video is too large — please choose one under 10MB.");
-          return;
-        }
-        videoUrl = await fileToBase64(videoFile);
       }
 
       fetch(apiBase, {
@@ -176,7 +160,6 @@
           title: form.get("title"),
           body: form.get("body"),
           imageUrl,
-          videoUrl,
         }),
       }).then(() => {
         alert("Thanks! Your review will show once it's approved.");

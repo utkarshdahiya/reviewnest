@@ -18,8 +18,7 @@ export async function action({ request }) {
 
   if (actionType === "updateSettings") {
     const allowPhoto = formData.get("allowPhoto") === "true";
-    const allowVideo = formData.get("allowVideo") === "true";
-    await updateShopSettings(session.shop, { allowPhoto, allowVideo });
+    await updateShopSettings(session.shop, { allowPhoto });
     return data({ ok: true });
   }
 
@@ -38,7 +37,6 @@ export default function ReviewsAdmin() {
       {
         actionType: "updateSettings",
         allowPhoto: field === "allowPhoto" ? value : settings.allowPhoto,
-        allowVideo: field === "allowVideo" ? value : settings.allowVideo,
       },
       { method: "post" }
     );
@@ -50,7 +48,6 @@ export default function ReviewsAdmin() {
     "★".repeat(r.rating),
     r.body,
     r.imageUrl ? <Thumbnail key={`img-${r.id}`} source={r.imageUrl} alt="Review photo" size="small" /> : "—",
-    r.videoUrl ? "🎥 Video attached" : "—",
     <Badge key={`badge-${r.id}`} tone={r.status === "approved" ? "success" : r.status === "rejected" ? "critical" : "attention"}>
       {r.status}
     </Badge>,
@@ -75,11 +72,6 @@ export default function ReviewsAdmin() {
               checked={settings.allowPhoto}
               onChange={(value) => handleSettingsChange("allowPhoto", value)}
             />
-            <Checkbox
-              label="Allow customers to attach a short video to their review"
-              checked={settings.allowVideo}
-              onChange={(value) => handleSettingsChange("allowVideo", value)}
-            />
           </BlockStack>
         </Card>
 
@@ -94,8 +86,8 @@ export default function ReviewsAdmin() {
             </EmptyState>
           ) : (
             <DataTable
-              columnContentTypes={["text", "text", "text", "text", "text", "text", "text", "text"]}
-              headings={["Product", "Customer", "Rating", "Review", "Photo", "Video", "Status", "Actions"]}
+              columnContentTypes={["text", "text", "text", "text", "text", "text", "text"]}
+              headings={["Product", "Customer", "Rating", "Review", "Photo", "Status", "Actions"]}
               rows={rows}
             />
           )}

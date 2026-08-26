@@ -28,12 +28,12 @@ export async function action({ request }) {
   }
 
   const formData = await request.json();
-  const { shop, productId, authorName, rating, title, body, imageUrl, videoUrl } = formData;
+  const { shop, productId, authorName, rating, title, body, imageUrl } = formData;
 
   if (!productId || !authorName || !rating || !body) {
     return data({ error: "Missing required fields" }, { status: 400, headers: corsHeaders });
   }
 
-  const review = await createReview({ shop, productId, authorName, rating, title, body, imageUrl, videoUrl });
+  const review = await createReview({ shop, productId, authorName, rating, title, body, imageUrl });
   return data({ ok: true, review }, { headers: corsHeaders });
 }

@@ -15,9 +15,8 @@ export async function getApprovedReviewsForProduct(shop, productId) {
   });
 }
 
-export async function createReview({ shop, productId, authorName, rating, title, body, imageUrl, videoUrl }) {
+export async function createReview({ shop, productId, authorName, rating, title, body, imageUrl }) {
   const uploadedImageUrl = await uploadBase64ToR2(imageUrl, `${shop}/reviews/images`);
-  const uploadedVideoUrl = await uploadBase64ToR2(videoUrl, `${shop}/reviews/videos`);
 
   return db.review.create({
     data: {
@@ -29,7 +28,6 @@ export async function createReview({ shop, productId, authorName, rating, title,
       body,
       status: "pending",
       imageUrl: uploadedImageUrl,
-      videoUrl: uploadedVideoUrl,
     },
   });
 }

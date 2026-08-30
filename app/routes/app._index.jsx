@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useLoaderData, useFetcher } from "react-router";
+import { useLoaderData } from "react-router";
 import {
   Page,
   Card,
@@ -101,21 +101,23 @@ export const action = async ({ request }) => {
 };
 
 function ReviewRow({ review }) {
-  const fetcher = useFetcher();
+  const [status, setStatus] = useState(review.status);
 
-  const approve = () => {
-    fetcher.submit(
-      { id: review.id, actionType: "approve" },
-      { method: "post" }
-    );
+  const updateStatus = async (actionType) => {
+    const res = await fetch("/api/approve", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: review.id, actionType }),
+    });
+    if (res.ok) {
+      setStatus(actionType === "approve" ? "approved" : "rejected");
+    } else {
+      alert("Failed to update review status");
+    }
   };
 
-  const reject = () => {
-    fetcher.submit(
-      { id: review.id, actionType: "reject" },
-      { method: "post" }
-    );
-  };
+  const approve = () => updateStatus("approve");
+  const reject = () => updateStatus("reject");
 
   return (
     <Card>
@@ -127,10 +129,10 @@ function ReviewRow({ review }) {
           <p>{review.body}</p>
         </BlockStack>
         <Badge tone={
-          review.status === "approved" ? "success" :
-          review.status === "rejected" ? "critical" : "attention"
+          status === "approved" ? "success" :
+          status === "rejected" ? "critical" : "attention"
         }>
-          {review.status}
+          {status}
         </Badge>
         <InlineStack gap="200">
           <Button onClick={approve} variant="primary">Approve</Button>

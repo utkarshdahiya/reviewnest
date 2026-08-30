@@ -37,25 +37,33 @@ export const loader = async ({ request }) => {
 
 export const action = async ({ request }) => {
   try {
-    const formData = await request.formData();
-    console.log("📦 Action: Form data received:");
-    for (let [key, value] of formData.entries()) {
-      console.log(`  ${key}: ${value}`);
+    console.log("📦 Action: Request received. Content-Type:", request.headers.get("Content-Type"));
+
+    let data;
+    if (request.headers.get("Content-Type")?.includes("application/json")) {
+      data = await request.json();
+      console.log("📦 Action: JSON data received:", data);
+    } else {
+      const formData = await request.formData();
+      data = Object.fromEntries(formData.entries());
+      console.log("📦 Action: Form data received:", data);
     }
 
     const { session } = await authenticate.admin(request);
     console.log("✅ Action: Authenticated shop:", session.shop);
 
-    const id = formData.get("id");
-    const actionType = formData.get("actionType");
+    const id = data.id;
+    const actionType = data.actionType;
 
     if (!id) {
+      console.error("❌ Action Error: Missing id", data);
       return new Response(
         JSON.stringify({ error: "Missing id" }),
         { status: 400, headers: { "Content-Type": "application/json" } }
       );
     }
     if (!actionType) {
+      console.error("❌ Action Error: Missing actionType", data);
       return new Response(
         JSON.stringify({ error: "Missing actionType" }),
         { status: 400, headers: { "Content-Type": "application/json" } }

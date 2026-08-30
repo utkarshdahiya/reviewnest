@@ -28,16 +28,12 @@ export const action = async ({ request }) => {
   const id = formData.get("id");
   const actionType = formData.get("actionType");
 
-  // Validate required fields
   if (!id || !actionType) {
     return new Response("Missing id or actionType", { status: 400 });
   }
 
-  // Convert id to integer (if your model uses Int)
-  const questionId = parseInt(id, 10);
-  if (isNaN(questionId)) {
-    return new Response("Invalid id", { status: 400 });
-  }
+  // id is a string (cuid) – use it directly
+  const questionId = id;
 
   if (actionType === "answer") {
     const answerText = formData.get("answerText");

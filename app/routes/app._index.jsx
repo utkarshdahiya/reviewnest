@@ -11,8 +11,10 @@ import {
 import { authenticate } from "../shopify.server";
 import db from "../db.server";
 
-// Loader with try-catch to log errors
 export const loader = async ({ request }) => {
+  // TEST: force error to confirm loader runs
+  throw new Error("Loader is running (test)");
+
   try {
     const { session } = await authenticate.admin(request);
     console.log("✅ Loader: Authenticated shop:", session.shop);
@@ -33,7 +35,6 @@ export const loader = async ({ request }) => {
   }
 };
 
-// Action with debug logs (unchanged)
 export const action = async ({ request }) => {
   try {
     const formData = await request.formData();

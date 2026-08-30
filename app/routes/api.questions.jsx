@@ -30,9 +30,9 @@ export const loader = async ({ request }) => {
   }
 
   const questions = await db.question.findMany({
-    where: { shop, productId, status: "APPROVED" },
-    select: { question: true }
-  });
+  where: { shop, productId, status: "APPROVED" },
+  select: { questionText: true },   // ✅ correct
+});
 
   return new Response(JSON.stringify({ questions }), {
     headers: CORS_HEADERS

@@ -5,15 +5,17 @@ import {
   Layout,
   Card,
   Badge,
-  Button,
   BlockStack,
   InlineStack,
   Text,
   Tabs,
   Thumbnail,
   EmptyState,
-  Divider,
+  IndexTable,
+  useIndexResourceState,
+  Icon,
 } from "@shopify/polaris";
+import { CheckIcon, XIcon } from "@shopify/polaris-icons";
 import { authenticate } from "../shopify.server";
 import db from "../db.server";
 
@@ -36,23 +38,23 @@ export const loader = async ({ request }) => {
   }
 };
 
-function timeAgo(dateString) {
+function formatDate(dateString) {
   const date = new Date(dateString);
-  const seconds = Math.floor((new Date() - date) / 1000);
-  const intervals = [
-    ["year", 31536000], ["month", 2592000], ["day", 86400],
-    ["hour", 3600], ["minute", 60],
-  ];
-  for (const [label, secs] of intervals) {
-    const count = Math.floor(seconds / secs);
-    if (count >= 1) return `${count} ${label}${count > 1 ? "s" : ""} ago`;
-  }
-  return "just now";
+  const now = new Date();
+  const isToday = date.toDateString() === now.toDateString();
+  const yesterday = new Date(now);
+  yesterday.setDate(now.getDate() - 1);
+  const isYesterday = date.toDateString() === yesterday.toDateString();
+
+  const time = date.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+  if (isToday) return `Today, ${time}`;
+  if (isYesterday) return `Yesterday, ${time}`;
+  return date.toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
 }
 
-function Stars({ rating, size = 18 }) {
+function Stars({ rating, size = 16 }) {
   return (
-    <div style={{ display: "flex", gap: 3 }}>
+    <div style={{ display: "flex", gap: 2 }}>
       {[1, 2, 3, 4, 5].map((i) => (
         <svg key={i} width={size} height={size} viewBox="0 0 20 20">
           <path
@@ -69,14 +71,8 @@ function IconBadge({ emoji, bg }) {
   return (
     <div
       style={{
-        width: 36,
-        height: 36,
-        borderRadius: 10,
-        background: bg,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        fontSize: 18,
+        width: 36, height: 36, borderRadius: 10, background: bg,
+        display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18,
       }}
     >
       {emoji}
@@ -103,8 +99,7 @@ function StatCard({ label, value, sub, emoji, bg }) {
 
 function RatingBreakdown({ reviews }) {
   const counts = [5, 4, 3, 2, 1].map((star) => ({
-    star,
-    count: reviews.filter((r) => r.rating === star).length,
+    star, count: reviews.filter((r) => r.rating === star).length,
   }));
   const max = Math.max(1, ...counts.map((c) => c.count));
 
@@ -119,20 +114,10 @@ function RatingBreakdown({ reviews }) {
           <InlineStack key={star} gap="200" blockAlign="center" wrap={false}>
             <div style={{ width: 14 }}><Text as="span" variant="bodySm">{star}</Text></div>
             <svg width="16" height="16" viewBox="0 0 20 20">
-              <path
-                d="M10 1.5l2.6 5.6 6.1.6-4.6 4.1 1.3 6-5.4-3.1-5.4 3.1 1.3-6-4.6-4.1 6.1-.6z"
-                fill="#F6A623"
-              />
+              <path d="M10 1.5l2.6 5.6 6.1.6-4.6 4.1 1.3 6-5.4-3.1-5.4 3.1 1.3-6-4.6-4.1 6.1-.6z" fill="#F6A623" />
             </svg>
             <div style={{ flex: 1, height: 6, background: "#EDEDED", borderRadius: 4 }}>
-              <div
-                style={{
-                  width: `${(count / max) * 100}%`,
-                  height: "100%",
-                  background: BRAND_GREEN,
-                  borderRadius: 4,
-                }}
-              />
+              <div style={{ width: `${(count / max) * 100}%`, height: "100%", background: BRAND_GREEN, borderRadius: 4 }} />
             </div>
             <div style={{ width: 24, textAlign: "right" }}>
               <Text as="span" variant="bodySm" tone="subdued">{count}</Text>
@@ -151,7 +136,6 @@ function ActivityChart({ reviews }) {
     d.setHours(0, 0, 0, 0);
     return d;
   });
-
   const counts = days.map((day) => {
     const next = new Date(day);
     next.setDate(next.getDate() + 1);
@@ -160,7 +144,6 @@ function ActivityChart({ reviews }) {
       return created >= day && created < next;
     }).length;
   });
-
   const max = Math.max(1, ...counts);
 
   return (
@@ -192,24 +175,16 @@ function ActivityChart({ reviews }) {
   );
 }
 
-function Avatar({ name }) {
+function Avatar({ name, size = 40 }) {
   const colors = ["#7C3AED", "#DB2777", "#0891B2", "#D97706", "#16A34A", "#DC2626"];
   const letter = (name || "?").trim().charAt(0).toUpperCase();
   const colorIndex = letter.charCodeAt(0) % colors.length;
   return (
     <div
       style={{
-        width: 40,
-        height: 40,
-        borderRadius: "50%",
-        background: colors[colorIndex],
-        color: "white",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        fontWeight: 600,
-        fontSize: 16,
-        flexShrink: 0,
+        width: size, height: size, borderRadius: "50%", background: colors[colorIndex],
+        color: "white", display: "flex", alignItems: "center", justifyContent: "center",
+        fontWeight: 600, fontSize: size * 0.4, flexShrink: 0,
       }}
     >
       {letter}
@@ -217,78 +192,111 @@ function Avatar({ name }) {
   );
 }
 
-function ReviewRow({ review }) {
-  const [status, setStatus] = useState(review.status);
+function ReviewsTable({ reviews, onStatusChange }) {
+  const resourceName = { singular: "review", plural: "reviews" };
+  const { selectedResources, allResourcesSelected, handleSelectionChange } =
+    useIndexResourceState(reviews);
 
-  const updateStatus = async (actionType) => {
-    const res = await fetch("/api/approve", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id: review.id, actionType }),
-    });
-    if (res.ok) {
-      setStatus(actionType === "approve" ? "approved" : "rejected");
-    } else {
-      alert("Failed to update review status");
-    }
-  };
+  const rows = reviews.map((review, index) => {
+    const tone =
+      review.status === "approved" ? "success" :
+      review.status === "rejected" ? "critical" : "attention";
 
-  const approve = () => updateStatus("approve");
-  const reject = () => updateStatus("reject");
-
-  const tone =
-    status === "approved" ? "success" :
-    status === "rejected" ? "critical" : "attention";
-
-  const bgTone =
-    status === "approved" ? "bg-surface-success" :
-    status === "rejected" ? "bg-surface-critical" :
-    "bg-surface-caution";
-
-  return (
-    <Card background={bgTone}>
-      <BlockStack gap="300">
-        <InlineStack align="space-between" blockAlign="center">
-          <InlineStack gap="300" blockAlign="center">
-            <Avatar name={review.authorName} />
+    return (
+      <IndexTable.Row
+        id={review.id}
+        key={review.id}
+        selected={selectedResources.includes(review.id)}
+        position={index}
+      >
+        <IndexTable.Cell>
+          <InlineStack gap="300" blockAlign="center" wrap={false}>
+            <Avatar name={review.authorName} size={32} />
             <BlockStack gap="050">
-              <Text as="h3" variant="headingSm">{review.authorName || "Anonymous"}</Text>
-              <Text as="p" variant="bodySm" tone="subdued">
-                Product {review.productId} · {timeAgo(review.createdAt)}
+              <InlineStack gap="150" blockAlign="center">
+                <Text as="span" fontWeight="semibold">{review.authorName || "Anonymous"}</Text>
+                {review.imageUrl && <Badge tone="info" size="small">Photo</Badge>}
+              </InlineStack>
+              {review.title && <Text as="span" variant="bodySm">{review.title}</Text>}
+              <Text as="span" variant="bodySm" tone="subdued" truncate>
+                {review.body}
               </Text>
             </BlockStack>
           </InlineStack>
-          <Badge tone={tone}>{status}</Badge>
-        </InlineStack>
+        </IndexTable.Cell>
+        <IndexTable.Cell>
+          <InlineStack gap="200" blockAlign="center">
+            <Thumbnail source={review.imageUrl || "https://cdn.shopify.com/s/files/1/0757/9955/files/empty-state.svg"} size="small" alt="" />
+            <Text as="span" variant="bodySm">Product {review.productId}</Text>
+          </InlineStack>
+        </IndexTable.Cell>
+        <IndexTable.Cell>
+          <BlockStack gap="050">
+            <Stars rating={review.rating} />
+            <Text as="span" variant="bodySm" tone="subdued">{review.rating.toFixed(1)}</Text>
+          </BlockStack>
+        </IndexTable.Cell>
+        <IndexTable.Cell>
+          <Text as="span" variant="bodySm">{formatDate(review.createdAt)}</Text>
+        </IndexTable.Cell>
+        <IndexTable.Cell>
+          <Badge tone={tone}>{review.status}</Badge>
+        </IndexTable.Cell>
+        <IndexTable.Cell>
+          <InlineStack gap="150">
+            <button
+              onClick={(e) => { e.stopPropagation(); onStatusChange(review.id, "approve"); }}
+              disabled={review.status === "approved"}
+              style={{
+                border: "none", background: "#DFF3E8", borderRadius: 6, width: 28, height: 28,
+                display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer",
+                opacity: review.status === "approved" ? 0.4 : 1,
+              }}
+              title="Approve"
+            >
+              <Icon source={CheckIcon} tone="success" />
+            </button>
+            <button
+              onClick={(e) => { e.stopPropagation(); onStatusChange(review.id, "reject"); }}
+              disabled={review.status === "rejected"}
+              style={{
+                border: "none", background: "#FBE3E1", borderRadius: 6, width: 28, height: 28,
+                display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer",
+                opacity: review.status === "rejected" ? 0.4 : 1,
+              }}
+              title="Reject"
+            >
+              <Icon source={XIcon} tone="critical" />
+            </button>
+          </InlineStack>
+        </IndexTable.Cell>
+      </IndexTable.Row>
+    );
+  });
 
-        <Stars rating={review.rating} />
-
-        {review.title && (
-          <Text as="p" variant="headingXs">{review.title}</Text>
-        )}
-        <Text as="p">{review.body}</Text>
-
-        {review.imageUrl && (
-          <Thumbnail source={review.imageUrl} alt="Review photo" size="large" />
-        )}
-
-        <Divider />
-
-        <InlineStack gap="200">
-          <Button onClick={approve} variant="primary" disabled={status === "approved"}>
-            Approve
-          </Button>
-          <Button onClick={reject} tone="critical" disabled={status === "rejected"}>
-            Reject
-          </Button>
-        </InlineStack>
-      </BlockStack>
-    </Card>
+  return (
+    <IndexTable
+      resourceName={resourceName}
+      itemCount={reviews.length}
+      selectedItemsCount={allResourcesSelected ? "All" : selectedResources.length}
+      onSelectionChange={handleSelectionChange}
+      headings={[
+        { title: "Review" },
+        { title: "Product" },
+        { title: "Rating" },
+        { title: "Received" },
+        { title: "Status" },
+        { title: "Action" },
+      ]}
+    >
+      {rows}
+    </IndexTable>
   );
 }
 
 export default function ReviewsPage() {
-  const { reviews } = useLoaderData();
+  const { reviews: initialReviews } = useLoaderData();
+  const [reviews, setReviews] = useState(initialReviews);
   const [selectedTab, setSelectedTab] = useState(0);
 
   const tabs = [
@@ -300,9 +308,7 @@ export default function ReviewsPage() {
 
   const statusFilter = tabs[selectedTab].id;
   const filteredReviews =
-    statusFilter === "all"
-      ? reviews
-      : reviews.filter((r) => r.status === statusFilter);
+    statusFilter === "all" ? reviews : reviews.filter((r) => r.status === statusFilter);
 
   const avgRating = reviews.length
     ? (reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length).toFixed(1)
@@ -310,9 +316,24 @@ export default function ReviewsPage() {
   const pendingCount = reviews.filter((r) => r.status === "pending").length;
   const approvedCount = reviews.filter((r) => r.status === "approved").length;
   const decidedCount = reviews.filter((r) => r.status !== "pending").length;
-  const responseRate = reviews.length
-    ? Math.round((decidedCount / reviews.length) * 100)
-    : 0;
+  const responseRate = reviews.length ? Math.round((decidedCount / reviews.length) * 100) : 0;
+
+  const handleStatusChange = async (id, actionType) => {
+    const res = await fetch("/api/approve", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id, actionType }),
+    });
+    if (res.ok) {
+      setReviews((prev) =>
+        prev.map((r) =>
+          r.id === id ? { ...r, status: actionType === "approve" ? "approved" : "rejected" } : r
+        )
+      );
+    } else {
+      alert("Failed to update review status");
+    }
+  };
 
   return (
     <Page title="Product Reviews" subtitle="Manage and moderate customer feedback">
@@ -347,26 +368,27 @@ export default function ReviewsPage() {
           </Layout.Section>
         </Layout>
 
-        <Card padding="0">
-          <Tabs tabs={tabs} selected={selectedTab} onSelect={setSelectedTab} />
-        </Card>
-
-        {filteredReviews.length === 0 ? (
-          <Card>
-            <EmptyState
-              heading="No reviews here yet"
-              image="https://cdn.shopify.com/s/files/1/0757/9955/files/empty-state.svg"
-            >
-              <p>Once customers submit reviews, they'll show up here.</p>
-            </EmptyState>
+        <BlockStack gap="200">
+          <Text as="h2" variant="headingMd">Moderation queue</Text>
+          <Card padding="0">
+            <Tabs tabs={tabs} selected={selectedTab} onSelect={setSelectedTab} />
           </Card>
-        ) : (
-          <BlockStack gap="300">
-            {filteredReviews.map((review) => (
-              <ReviewRow key={review.id} review={review} />
-            ))}
-          </BlockStack>
-        )}
+
+          {filteredReviews.length === 0 ? (
+            <Card>
+              <EmptyState
+                heading="No reviews here yet"
+                image="https://cdn.shopify.com/s/files/1/0757/9955/files/empty-state.svg"
+              >
+                <p>Once customers submit reviews, they'll show up here.</p>
+              </EmptyState>
+            </Card>
+          ) : (
+            <Card padding="0">
+              <ReviewsTable reviews={filteredReviews} onStatusChange={handleStatusChange} />
+            </Card>
+          )}
+        </BlockStack>
       </BlockStack>
     </Page>
   );

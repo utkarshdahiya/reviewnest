@@ -6,7 +6,7 @@ const CORS_HEADERS = {
   "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Requested-With",
 };
 
-export const loader = async ({ request }) {
+export const loader = async ({ request }) => {
   if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: CORS_HEADERS });
   const url = new URL(request.url);
   const shop = url.searchParams.get("shop");

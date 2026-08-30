@@ -1,97 +1,142 @@
-import { data } from "react-router";
-import { useLoaderData, useSubmit } from "react-router";
-import { Page, Card, DataTable, Badge, Button, ButtonGroup, EmptyState, Checkbox, BlockStack, Text, Thumbnail } from "@shopify/polaris";
+import { useState } from "react";
+import { useLoaderData, useFetcher } from "react-router";
+import {
+  Page,
+  Card,
+  Badge,
+  Button,
+  BlockStack,
+  InlineStack,
+  TextField,
+} from "@shopify/polaris";
 import { authenticate } from "../shopify.server";
-import { getReviewsForShop, setReviewStatus, getShopSettings, updateShopSettings } from "../models/reviews.server";
+import db from "../db.server";
 
-export async function loader({ request }) {
+// Loader: fetch all reviews for the shop
+export const loader = async ({ request }) => {
   const { session } = await authenticate.admin(request);
-  const reviews = await getReviewsForShop(session.shop);
-  const settings = await getShopSettings(session.shop);
-  return data({ reviews, settings });
-}
+  const reviews = await db.review.findMany({
+    where: { shop: session.shop },
+    orderBy: { createdAt: "desc" },
+  });
+  return { reviews };
+};
 
-export async function action({ request }) {
-  const { session } = await authenticate.admin(request);
-  const formData = await request.formData();
-  const actionType = formData.get("actionType");
+// Action: handle approve/reject with debug logs
+export const action = async ({ request }) => {
+  try {
+    const formData = await request.formData();
+    console.log("📦 Form data received:");
+    for (let [key, value] of formData.entries()) {
+      console.log(`  ${key}: ${value}`);
+    }
 
-  if (actionType === "updateSettings") {
-    const allowPhoto = formData.get("allowPhoto") === "true";
-    await updateShopSettings(session.shop, { allowPhoto });
-    return data({ ok: true });
+    const { session } = await authenticate.admin(request);
+    console.log("✅ Authenticated shop:", session.shop);
+
+    const id = formData.get("id");
+    const actionType = formData.get("actionType");
+
+    if (!id) {
+      return new Response(
+        JSON.stringify({ error: "Missing id" }),
+        { status: 400, headers: { "Content-Type": "application/json" } }
+      );
+    }
+    if (!actionType) {
+      return new Response(
+        JSON.stringify({ error: "Missing actionType" }),
+        { status: 400, headers: { "Content-Type": "application/json" } }
+      );
+    }
+
+    // Approve or reject the review
+    if (actionType === "approve") {
+      await db.review.update({
+        where: { id: id }, // id is a cuid (string)
+        data: { status: "approved" },
+      });
+    } else if (actionType === "reject") {
+      await db.review.update({
+        where: { id: id },
+        data: { status: "rejected" },
+      });
+    } else {
+      return new Response(
+        JSON.stringify({ error: `Invalid actionType: ${actionType}` }),
+        { status: 400, headers: { "Content-Type": "application/json" } }
+      );
+    }
+
+    return new Response(
+      JSON.stringify({ ok: true }),
+      { headers: { "Content-Type": "application/json" } }
+    );
+  } catch (error) {
+    console.error("🔥 Action error:", error);
+    return new Response(
+      JSON.stringify({ error: error.message, stack: error.stack }),
+      { status: 500, headers: { "Content-Type": "application/json" } }
+    );
   }
+};
 
-  const reviewId = formData.get("reviewId");
-  const status = formData.get("status");
-  await setReviewStatus(reviewId, status);
-  return data({ ok: true });
-}
+// Single review row component
+function ReviewRow({ review }) {
+  const fetcher = useFetcher();
 
-export default function ReviewsAdmin() {
-  const { reviews, settings } = useLoaderData();
-  const submit = useSubmit();
-
-  const handleSettingsChange = (field, value) => {
-    submit(
-      {
-        actionType: "updateSettings",
-        allowPhoto: field === "allowPhoto" ? value : settings.allowPhoto,
-      },
+  const approve = () => {
+    fetcher.submit(
+      { id: review.id, actionType: "approve" },
       { method: "post" }
     );
   };
 
-  const rows = reviews.map((r) => [
-    r.productId,
-    r.authorName,
-    "★".repeat(r.rating),
-    r.body,
-    r.imageUrl ? <Thumbnail key={`img-${r.id}`} source={r.imageUrl} alt="Review photo" size="small" /> : "—",
-    <Badge key={`badge-${r.id}`} tone={r.status === "approved" ? "success" : r.status === "rejected" ? "critical" : "attention"}>
-      {r.status}
-    </Badge>,
-    <ButtonGroup key={`actions-${r.id}`}>
-      <Button size="slim" onClick={() => submit({ reviewId: r.id, status: "approved" }, { method: "post" })}>
-        Approve
-      </Button>
-      <Button size="slim" tone="critical" onClick={() => submit({ reviewId: r.id, status: "rejected" }, { method: "post" })}>
-        Reject
-      </Button>
-    </ButtonGroup>,
-  ]);
+  const reject = () => {
+    fetcher.submit(
+      { id: review.id, actionType: "reject" },
+      { method: "post" }
+    );
+  };
+
+  return (
+    <Card>
+      <BlockStack gap="200">
+        <InlineStack align="space-between">
+          <BlockStack gap="050">
+            <p>
+              <strong>{review.authorName}</strong> rated {review.rating}★ for product {review.productId}
+            </p>
+            <p>{review.body}</p>
+            {review.imageUrl && <img src={review.imageUrl} alt="Review photo" width="100" />}
+          </BlockStack>
+          <Badge tone={
+            review.status === "approved" ? "success" :
+            review.status === "rejected" ? "critical" : "attention"
+          }>
+            {review.status}
+          </Badge>
+        </InlineStack>
+        <InlineStack gap="200">
+          <Button onClick={approve} variant="primary">Approve</Button>
+          <Button onClick={reject} tone="critical">Reject</Button>
+        </InlineStack>
+      </BlockStack>
+    </Card>
+  );
+}
+
+// Main page
+export default function ReviewsPage() {
+  const { reviews } = useLoaderData();
 
   return (
     <Page title="Product Reviews">
       <BlockStack gap="400">
-        <Card>
-          <BlockStack gap="200">
-            <Text as="h2" variant="headingMd">Review settings</Text>
-            <Checkbox
-              label="Allow customers to attach a photo to their review"
-              checked={settings.allowPhoto}
-              onChange={(value) => handleSettingsChange("allowPhoto", value)}
-            />
-          </BlockStack>
-        </Card>
-
-        <Card>
-          {reviews.length === 0 ? (
-            <EmptyState
-              heading="No reviews yet"
-              image="https://cdn.shopify.com/s/files/1/0757/9955/files/empty-state.svg"
-              action={{ content: "Add the review widget to your theme", url: "shopify://admin/themes/current/editor" }}
-            >
-              <p>Once the review widget is added to your product pages, customer reviews will show up here for you to approve or reject.</p>
-            </EmptyState>
-          ) : (
-            <DataTable
-              columnContentTypes={["text", "text", "text", "text", "text", "text", "text"]}
-              headings={["Product", "Customer", "Rating", "Review", "Photo", "Status", "Actions"]}
-              rows={rows}
-            />
-          )}
-        </Card>
+        {reviews.length === 0 && <Card><p>No reviews yet.</p></Card>}
+        {reviews.map((review) => (
+          <ReviewRow key={review.id} review={review} />
+        ))}
       </BlockStack>
     </Page>
   );

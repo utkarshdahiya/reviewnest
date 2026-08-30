@@ -13,7 +13,7 @@ import db from "../db.server";
 
 export const loader = async ({ request }) => {
   // TEST: force error to confirm loader runs
-  throw new Error("Loader is running (test)");
+
 
   try {
     const { session } = await authenticate.admin(request);

@@ -7,32 +7,43 @@ import {
   Button,
   BlockStack,
   InlineStack,
-  TextField,
 } from "@shopify/polaris";
 import { authenticate } from "../shopify.server";
 import db from "../db.server";
 
-// Loader: fetch all reviews for the shop
+// Loader with try-catch to log errors
 export const loader = async ({ request }) => {
-  const { session } = await authenticate.admin(request);
-  const reviews = await db.review.findMany({
-    where: { shop: session.shop },
-    orderBy: { createdAt: "desc" },
-  });
-  return { reviews };
+  try {
+    const { session } = await authenticate.admin(request);
+    console.log("✅ Loader: Authenticated shop:", session.shop);
+
+    const reviews = await db.review.findMany({
+      where: { shop: session.shop },
+      orderBy: { createdAt: "desc" },
+    });
+    console.log(`✅ Loader: Found ${reviews.length} reviews`);
+
+    return { reviews };
+  } catch (error) {
+    console.error("🔥 Loader error:", error);
+    return new Response(
+      JSON.stringify({ error: error.message, stack: error.stack }),
+      { status: 500, headers: { "Content-Type": "application/json" } }
+    );
+  }
 };
 
-// Action: handle approve/reject with debug logs
+// Action with debug logs (unchanged)
 export const action = async ({ request }) => {
   try {
     const formData = await request.formData();
-    console.log("📦 Form data received:");
+    console.log("📦 Action: Form data received:");
     for (let [key, value] of formData.entries()) {
       console.log(`  ${key}: ${value}`);
     }
 
     const { session } = await authenticate.admin(request);
-    console.log("✅ Authenticated shop:", session.shop);
+    console.log("✅ Action: Authenticated shop:", session.shop);
 
     const id = formData.get("id");
     const actionType = formData.get("actionType");
@@ -50,10 +61,9 @@ export const action = async ({ request }) => {
       );
     }
 
-    // Approve or reject the review
     if (actionType === "approve") {
       await db.review.update({
-        where: { id: id }, // id is a cuid (string)
+        where: { id: id },
         data: { status: "approved" },
       });
     } else if (actionType === "reject") {
@@ -81,7 +91,6 @@ export const action = async ({ request }) => {
   }
 };
 
-// Single review row component
 function ReviewRow({ review }) {
   const fetcher = useFetcher();
 
@@ -102,21 +111,18 @@ function ReviewRow({ review }) {
   return (
     <Card>
       <BlockStack gap="200">
-        <InlineStack align="space-between">
-          <BlockStack gap="050">
-            <p>
-              <strong>{review.authorName}</strong> rated {review.rating}★ for product {review.productId}
-            </p>
-            <p>{review.body}</p>
-            {review.imageUrl && <img src={review.imageUrl} alt="Review photo" width="100" />}
-          </BlockStack>
-          <Badge tone={
-            review.status === "approved" ? "success" :
-            review.status === "rejected" ? "critical" : "attention"
-          }>
-            {review.status}
-          </Badge>
-        </InlineStack>
+        <BlockStack gap="050">
+          <p>
+            <strong>{review.authorName}</strong> rated {review.rating}★ for product {review.productId}
+          </p>
+          <p>{review.body}</p>
+        </BlockStack>
+        <Badge tone={
+          review.status === "approved" ? "success" :
+          review.status === "rejected" ? "critical" : "attention"
+        }>
+          {review.status}
+        </Badge>
         <InlineStack gap="200">
           <Button onClick={approve} variant="primary">Approve</Button>
           <Button onClick={reject} tone="critical">Reject</Button>
@@ -126,7 +132,6 @@ function ReviewRow({ review }) {
   );
 }
 
-// Main page
 export default function ReviewsPage() {
   const { reviews } = useLoaderData();
 

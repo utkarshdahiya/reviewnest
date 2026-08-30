@@ -23,12 +23,55 @@ const BRAND_GREEN = "#3F8A63";
 
 export const loader = async ({ request }) => {
   try {
-    const { session } = await authenticate.admin(request);
+    const { session, admin } = await authenticate.admin(request);
     const reviews = await db.review.findMany({
       where: { shop: session.shop },
       orderBy: { createdAt: "desc" },
     });
-    return { reviews };
+
+    const uniqueProductIds = [...new Set(reviews.map((r) => r.productId))];
+    const gids = uniqueProductIds.map((id) => `gid://shopify/Product/${id}`);
+
+    const productMap = {};
+    if (gids.length > 0) {
+      try {
+        const response = await admin.graphql(
+          `#graphql
+          query getProducts($ids: [ID!]!) {
+            nodes(ids: $ids) {
+              ... on Product {
+                id
+                title
+                collections(first: 1) {
+                  edges { node { title } }
+                }
+              }
+            }
+          }`,
+          { variables: { ids: gids } }
+        );
+        const data = await response.json();
+        (data.data?.nodes || []).forEach((node) => {
+          if (node) {
+            const numericId = node.id.split("/").pop();
+            productMap[numericId] = {
+              title: node.title,
+              collection: node.collections.edges[0]?.node.title || null,
+            };
+          }
+        });
+      } catch (gqlError) {
+        console.error("⚠️ Failed to fetch product titles:", gqlError);
+      }
+    }
+
+    const reviewsWithProduct = reviews.map((r) => ({
+      ...r,
+      productTitle: productMap[r.productId]?.title || null,
+      productCollection: productMap[r.productId]?.collection || null,
+    }));
+
+    return { reviews: reviewsWithProduct };
   } catch (error) {
     console.error("🔥 Loader error:", error);
     return new Response(
@@ -176,14 +219,12 @@ function ActivityChart({ reviews }) {
 }
 
 function Avatar({ name, size = 40 }) {
-  const colors = ["#7C3AED", "#DB2777", "#0891B2", "#D97706", "#16A34A", "#DC2626"];
   const letter = (name || "?").trim().charAt(0).toUpperCase();
-  const colorIndex = letter.charCodeAt(0) % colors.length;
   return (
     <div
       style={{
-        width: size, height: size, borderRadius: "50%", background: colors[colorIndex],
-        color: "white", display: "flex", alignItems: "center", justifyContent: "center",
+        width: size, height: size, borderRadius: "50%", background: "#DFF3E8",
+        color: "#0F3D2E", display: "flex", alignItems: "center", justifyContent: "center",
         fontWeight: 600, fontSize: size * 0.4, flexShrink: 0,
       }}
     >
@@ -224,7 +265,7 @@ function ReviewsTable({ reviews, onStatusChange }) {
             </BlockStack>
           </InlineStack>
         </IndexTable.Cell>
-                <IndexTable.Cell>
+                        <IndexTable.Cell>
           <InlineStack gap="200" blockAlign="center">
             <div style={{
               width: 32, height: 32, borderRadius: 6, background: "#F1F1F1",
@@ -232,7 +273,14 @@ function ReviewsTable({ reviews, onStatusChange }) {
             }}>
               <span style={{ fontSize: 14 }}>📦</span>
             </div>
-            <Text as="span" variant="bodySm">Product {review.productId}</Text>
+            <BlockStack gap="0">
+              <Text as="span" variant="bodySm" fontWeight="medium">
+                {review.productTitle || `Product ${review.productId}`}
+              </Text>
+              {review.productCollection && (
+                <Text as="span" variant="bodyXs" tone="subdued">{review.productCollection}</Text>
+              )}
+            </BlockStack>
           </InlineStack>
         </IndexTable.Cell>
         <IndexTable.Cell>

@@ -17,6 +17,8 @@ import {
 import { authenticate } from "../shopify.server";
 import db from "../db.server";
 
+const BRAND_GREEN = "#0F3D2E";
+
 export const loader = async ({ request }) => {
   try {
     const { session } = await authenticate.admin(request);
@@ -48,11 +50,11 @@ function timeAgo(dateString) {
   return "just now";
 }
 
-function Stars({ rating }) {
+function Stars({ rating, size = 18 }) {
   return (
     <div style={{ display: "flex", gap: 3 }}>
       {[1, 2, 3, 4, 5].map((i) => (
-        <svg key={i} width="18" height="18" viewBox="0 0 20 20">
+        <svg key={i} width={size} height={size} viewBox="0 0 20 20">
           <path
             d="M10 1.5l2.6 5.6 6.1.6-4.6 4.1 1.3 6-5.4-3.1-5.4 3.1 1.3-6-4.6-4.1 6.1-.6z"
             fill={i <= rating ? "#F6A623" : "#E2E2E2"}
@@ -63,12 +65,128 @@ function Stars({ rating }) {
   );
 }
 
-function StatCard({ label, value, tone }) {
+function IconBadge({ emoji, bg }) {
+  return (
+    <div
+      style={{
+        width: 36,
+        height: 36,
+        borderRadius: 10,
+        background: bg,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        fontSize: 18,
+      }}
+    >
+      {emoji}
+    </div>
+  );
+}
+
+function StatCard({ label, value, sub, emoji, bg }) {
   return (
     <Card>
-      <BlockStack gap="150">
-        <Text as="p" variant="bodySm" tone="subdued">{label}</Text>
-        <Text as="p" variant="heading2xl" tone={tone}>{value}</Text>
+      <BlockStack gap="200">
+        <InlineStack align="space-between" blockAlign="center">
+          <Text as="p" variant="bodySm" tone="subdued">{label}</Text>
+          <IconBadge emoji={emoji} bg={bg} />
+        </InlineStack>
+        <InlineStack gap="150" blockAlign="baseline">
+          <Text as="p" variant="heading2xl">{value}</Text>
+          {sub && <Text as="p" variant="bodySm" tone="subdued">{sub}</Text>}
+        </InlineStack>
+      </BlockStack>
+    </Card>
+  );
+}
+
+function RatingBreakdown({ reviews }) {
+  const counts = [5, 4, 3, 2, 1].map((star) => ({
+    star,
+    count: reviews.filter((r) => r.rating === star).length,
+  }));
+  const max = Math.max(1, ...counts.map((c) => c.count));
+
+  return (
+    <Card>
+      <BlockStack gap="300">
+        <BlockStack gap="050">
+          <Text as="h3" variant="headingSm">Rating breakdown</Text>
+          <Text as="p" variant="bodySm" tone="subdued">How customers are rating you</Text>
+        </BlockStack>
+        {counts.map(({ star, count }) => (
+          <InlineStack key={star} gap="200" blockAlign="center" wrap={false}>
+            <div style={{ width: 14 }}><Text as="span" variant="bodySm">{star}</Text></div>
+            <svg width="16" height="16" viewBox="0 0 20 20">
+              <path
+                d="M10 1.5l2.6 5.6 6.1.6-4.6 4.1 1.3 6-5.4-3.1-5.4 3.1 1.3-6-4.6-4.1 6.1-.6z"
+                fill="#F6A623"
+              />
+            </svg>
+            <div style={{ flex: 1, height: 6, background: "#EDEDED", borderRadius: 4 }}>
+              <div
+                style={{
+                  width: `${(count / max) * 100}%`,
+                  height: "100%",
+                  background: BRAND_GREEN,
+                  borderRadius: 4,
+                }}
+              />
+            </div>
+            <div style={{ width: 24, textAlign: "right" }}>
+              <Text as="span" variant="bodySm" tone="subdued">{count}</Text>
+            </div>
+          </InlineStack>
+        ))}
+      </BlockStack>
+    </Card>
+  );
+}
+
+function ActivityChart({ reviews }) {
+  const days = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date();
+    d.setDate(d.getDate() - (6 - i));
+    d.setHours(0, 0, 0, 0);
+    return d;
+  });
+
+  const counts = days.map((day) => {
+    const next = new Date(day);
+    next.setDate(next.getDate() + 1);
+    return reviews.filter((r) => {
+      const created = new Date(r.createdAt);
+      return created >= day && created < next;
+    }).length;
+  });
+
+  const max = Math.max(1, ...counts);
+
+  return (
+    <Card>
+      <BlockStack gap="300">
+        <BlockStack gap="050">
+          <Text as="h3" variant="headingSm">Review activity</Text>
+          <Text as="p" variant="bodySm" tone="subdued">Reviews received over the last 7 days</Text>
+        </BlockStack>
+        <div style={{ display: "flex", alignItems: "flex-end", gap: 10, height: 100 }}>
+          {counts.map((count, i) => (
+            <div key={i} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
+              <div
+                style={{
+                  width: "100%",
+                  height: `${Math.max(6, (count / max) * 90)}px`,
+                  background: i === counts.length - 1 ? BRAND_GREEN : "#B7D9C9",
+                  borderRadius: 4,
+                }}
+              />
+              <Text as="span" variant="bodyXs" tone="subdued">
+                {days[i].toLocaleDateString(undefined, { day: "numeric", month: "short" })}
+              </Text>
+            </div>
+          ))}
+        </div>
       </BlockStack>
     </Card>
   );
@@ -190,19 +308,42 @@ export default function ReviewsPage() {
     ? (reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length).toFixed(1)
     : "—";
   const pendingCount = reviews.filter((r) => r.status === "pending").length;
+  const approvedCount = reviews.filter((r) => r.status === "approved").length;
+  const decidedCount = reviews.filter((r) => r.status !== "pending").length;
+  const responseRate = reviews.length
+    ? Math.round((decidedCount / reviews.length) * 100)
+    : 0;
 
   return (
     <Page title="Product Reviews" subtitle="Manage and moderate customer feedback">
       <BlockStack gap="500">
         <Layout>
           <Layout.Section variant="oneThird">
-            <StatCard label="Total reviews" value={reviews.length} tone="base" />
+            <StatCard label="Total reviews" value={reviews.length} emoji="📥" bg="#DFF3E8" />
           </Layout.Section>
           <Layout.Section variant="oneThird">
-            <StatCard label="Average rating" value={`${avgRating} ★`} tone="success" />
+            <StatCard label="Average rating" value={avgRating} sub="out of 5.0" emoji="⭐" bg="#FDF0DA" />
           </Layout.Section>
           <Layout.Section variant="oneThird">
-            <StatCard label="Pending approval" value={pendingCount} tone="caution" />
+            <StatCard label="Needs attention" value={pendingCount} sub="to review" emoji="💬" bg="#FDF0DA" />
+          </Layout.Section>
+        </Layout>
+
+        <Layout>
+          <Layout.Section variant="oneHalf">
+            <StatCard label="Published" value={approvedCount} sub="on storefront" emoji="✅" bg="#DFF3E8" />
+          </Layout.Section>
+          <Layout.Section variant="oneHalf">
+            <StatCard label="Response rate" value={`${responseRate}%`} sub="of all reviews" emoji="📨" bg="#E1EBFA" />
+          </Layout.Section>
+        </Layout>
+
+        <Layout>
+          <Layout.Section variant="oneHalf">
+            <ActivityChart reviews={reviews} />
+          </Layout.Section>
+          <Layout.Section variant="oneHalf">
+            <RatingBreakdown reviews={reviews} />
           </Layout.Section>
         </Layout>
 

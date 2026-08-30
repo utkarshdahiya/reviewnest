@@ -1,3 +1,5 @@
+# Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
+
 client_id = "22215140b5ec94721ab323eecabef272"
 application_url = "https://reviewnest-production.up.railway.app"
 
@@ -5,10 +7,26 @@ embedded = true
 name = "reviewnest"
 
 [access_scopes]
+# Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
 scopes = "write_products,write_metaobjects,write_metaobject_definitions,read_orders"
 
 [auth]
 redirect_urls = [ "https://reviewnest-production.up.railway.app/api/auth" ]
+
+[webhooks]
+api_version = "2026-10"
+
+  [[webhooks.subscriptions]]
+  uri = "https://reviewnest-production.up.railway.app/webhooks/customers/data_request"
+  compliance_topics = [ "customers/data_request" ]
+
+  [[webhooks.subscriptions]]
+  uri = "https://reviewnest-production.up.railway.app/webhooks/customers/redact"
+  compliance_topics = [ "customers/redact" ]
+
+  [[webhooks.subscriptions]]
+  uri = "https://reviewnest-production.up.railway.app/webhooks/shop/redact"
+  compliance_topics = [ "shop/redact" ]
 
 [build]
 automatically_update_urls_on_dev = true

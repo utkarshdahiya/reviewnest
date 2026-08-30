@@ -28,20 +28,38 @@ export const action = async ({ request }) => {
   const id = formData.get("id");
   const actionType = formData.get("actionType");
 
+  // Validate required fields
+  if (!id || !actionType) {
+    return new Response("Missing id or actionType", { status: 400 });
+  }
+
+  // Convert id to integer (if your model uses Int)
+  const questionId = parseInt(id, 10);
+  if (isNaN(questionId)) {
+    return new Response("Invalid id", { status: 400 });
+  }
+
   if (actionType === "answer") {
     const answerText = formData.get("answerText");
+    if (!answerText) {
+      return new Response("Answer text is required", { status: 400 });
+    }
     await db.question.update({
-      where: { id },
+      where: { id: questionId },
       data: { answerText, status: "answered" },
     });
   } else if (actionType === "reject") {
     await db.question.update({
-      where: { id },
+      where: { id: questionId },
       data: { status: "rejected" },
     });
+  } else {
+    return new Response("Invalid actionType", { status: 400 });
   }
 
-  return { ok: true };
+  return new Response(JSON.stringify({ ok: true }), {
+    headers: { "Content-Type": "application/json" },
+  });
 };
 
 function QuestionRow({ question }) {

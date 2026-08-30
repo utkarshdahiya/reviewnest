@@ -23,39 +23,72 @@ export const loader = async ({ request }) => {
 };
 
 export const action = async ({ request }) => {
-  const { session } = await authenticate.admin(request);
-  const formData = await request.formData();
-  const id = formData.get("id");
-  const actionType = formData.get("actionType");
-
-  if (!id || !actionType) {
-    return new Response("Missing id or actionType", { status: 400 });
-  }
-
-  // id is a string (cuid) – use it directly
-  const questionId = id;
-
-  if (actionType === "answer") {
-    const answerText = formData.get("answerText");
-    if (!answerText) {
-      return new Response("Answer text is required", { status: 400 });
+  try {
+    // 1. Log all form data to Railway logs
+    const formData = await request.formData();
+    console.log("📦 Form data received:");
+    for (let [key, value] of formData.entries()) {
+      console.log(`  ${key}: ${value}`);
     }
-    await db.question.update({
-      where: { id: questionId },
-      data: { answerText, status: "answered" },
-    });
-  } else if (actionType === "reject") {
-    await db.question.update({
-      where: { id: questionId },
-      data: { status: "rejected" },
-    });
-  } else {
-    return new Response("Invalid actionType", { status: 400 });
-  }
 
-  return new Response(JSON.stringify({ ok: true }), {
-    headers: { "Content-Type": "application/json" },
-  });
+    // 2. Authenticate
+    const { session } = await authenticate.admin(request);
+    console.log("✅ Authenticated shop:", session.shop);
+
+    // 3. Extract fields
+    const id = formData.get("id");
+    const actionType = formData.get("actionType");
+
+    // 4. Validate
+    if (!id) {
+      return new Response(
+        JSON.stringify({ error: "Missing id" }),
+        { status: 400, headers: { "Content-Type": "application/json" } }
+      );
+    }
+    if (!actionType) {
+      return new Response(
+        JSON.stringify({ error: "Missing actionType" }),
+        { status: 400, headers: { "Content-Type": "application/json" } }
+      );
+    }
+
+    // 5. Process action
+    if (actionType === "answer") {
+      const answerText = formData.get("answerText");
+      if (!answerText) {
+        return new Response(
+          JSON.stringify({ error: "Answer text required" }),
+          { status: 400, headers: { "Content-Type": "application/json" } }
+        );
+      }
+      await db.question.update({
+        where: { id: id }, // id is a cuid (string)
+        data: { answerText, status: "answered" },
+      });
+    } else if (actionType === "reject") {
+      await db.question.update({
+        where: { id: id },
+        data: { status: "rejected" },
+      });
+    } else {
+      return new Response(
+        JSON.stringify({ error: `Invalid actionType: ${actionType}` }),
+        { status: 400, headers: { "Content-Type": "application/json" } }
+      );
+    }
+
+    return new Response(
+      JSON.stringify({ ok: true }),
+      { headers: { "Content-Type": "application/json" } }
+    );
+  } catch (error) {
+    console.error("🔥 Action error:", error);
+    return new Response(
+      JSON.stringify({ error: error.message, stack: error.stack }),
+      { status: 500, headers: { "Content-Type": "application/json" } }
+    );
+  }
 };
 
 function QuestionRow({ question }) {

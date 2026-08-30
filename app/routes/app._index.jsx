@@ -12,10 +12,8 @@ import {
   Tabs,
   Thumbnail,
   EmptyState,
-  Icon,
   Divider,
 } from "@shopify/polaris";
-import { StarFilledIcon } from "@shopify/polaris-icons";
 import { authenticate } from "../shopify.server";
 import db from "../db.server";
 
@@ -36,26 +34,68 @@ export const loader = async ({ request }) => {
   }
 };
 
+function timeAgo(dateString) {
+  const date = new Date(dateString);
+  const seconds = Math.floor((new Date() - date) / 1000);
+  const intervals = [
+    ["year", 31536000], ["month", 2592000], ["day", 86400],
+    ["hour", 3600], ["minute", 60],
+  ];
+  for (const [label, secs] of intervals) {
+    const count = Math.floor(seconds / secs);
+    if (count >= 1) return `${count} ${label}${count > 1 ? "s" : ""} ago`;
+  }
+  return "just now";
+}
+
 function Stars({ rating }) {
   return (
-    <InlineStack gap="050">
+    <div style={{ display: "flex", gap: 3 }}>
       {[1, 2, 3, 4, 5].map((i) => (
-        <span key={i} style={{ opacity: i <= rating ? 1 : 0.25 }}>
-          <Icon source={StarFilledIcon} tone="warning" />
-        </span>
+        <svg key={i} width="18" height="18" viewBox="0 0 20 20">
+          <path
+            d="M10 1.5l2.6 5.6 6.1.6-4.6 4.1 1.3 6-5.4-3.1-5.4 3.1 1.3-6-4.6-4.1 6.1-.6z"
+            fill={i <= rating ? "#F6A623" : "#E2E2E2"}
+          />
+        </svg>
       ))}
-    </InlineStack>
+    </div>
   );
 }
 
-function StatCard({ label, value }) {
+function StatCard({ label, value, tone }) {
   return (
     <Card>
-      <BlockStack gap="100">
+      <BlockStack gap="150">
         <Text as="p" variant="bodySm" tone="subdued">{label}</Text>
-        <Text as="p" variant="headingLg">{value}</Text>
+        <Text as="p" variant="heading2xl" tone={tone}>{value}</Text>
       </BlockStack>
     </Card>
+  );
+}
+
+function Avatar({ name }) {
+  const colors = ["#7C3AED", "#DB2777", "#0891B2", "#D97706", "#16A34A", "#DC2626"];
+  const letter = (name || "?").trim().charAt(0).toUpperCase();
+  const colorIndex = letter.charCodeAt(0) % colors.length;
+  return (
+    <div
+      style={{
+        width: 40,
+        height: 40,
+        borderRadius: "50%",
+        background: colors[colorIndex],
+        color: "white",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        fontWeight: 600,
+        fontSize: 16,
+        flexShrink: 0,
+      }}
+    >
+      {letter}
+    </div>
   );
 }
 
@@ -82,16 +122,24 @@ function ReviewRow({ review }) {
     status === "approved" ? "success" :
     status === "rejected" ? "critical" : "attention";
 
+  const bgTone =
+    status === "approved" ? "bg-surface-success" :
+    status === "rejected" ? "bg-surface-critical" :
+    "bg-surface-caution";
+
   return (
-    <Card>
+    <Card background={bgTone}>
       <BlockStack gap="300">
         <InlineStack align="space-between" blockAlign="center">
-          <BlockStack gap="050">
-            <Text as="h3" variant="headingSm">{review.authorName || "Anonymous"}</Text>
-            <Text as="p" variant="bodySm" tone="subdued">
-              Product {review.productId}
-            </Text>
-          </BlockStack>
+          <InlineStack gap="300" blockAlign="center">
+            <Avatar name={review.authorName} />
+            <BlockStack gap="050">
+              <Text as="h3" variant="headingSm">{review.authorName || "Anonymous"}</Text>
+              <Text as="p" variant="bodySm" tone="subdued">
+                Product {review.productId} · {timeAgo(review.createdAt)}
+              </Text>
+            </BlockStack>
+          </InlineStack>
           <Badge tone={tone}>{status}</Badge>
         </InlineStack>
 
@@ -148,13 +196,13 @@ export default function ReviewsPage() {
       <BlockStack gap="500">
         <Layout>
           <Layout.Section variant="oneThird">
-            <StatCard label="Total reviews" value={reviews.length} />
+            <StatCard label="Total reviews" value={reviews.length} tone="base" />
           </Layout.Section>
           <Layout.Section variant="oneThird">
-            <StatCard label="Average rating" value={`${avgRating} ★`} />
+            <StatCard label="Average rating" value={`${avgRating} ★`} tone="success" />
           </Layout.Section>
           <Layout.Section variant="oneThird">
-            <StatCard label="Pending approval" value={pendingCount} />
+            <StatCard label="Pending approval" value={pendingCount} tone="caution" />
           </Layout.Section>
         </Layout>
 

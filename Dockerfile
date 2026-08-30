@@ -1,7 +1,8 @@
 FROM node:20-alpine
 RUN apk add --no-cache openssl
 
-EXPOSE 3000
+# Railway needs to know the app is on 8080
+EXPOSE 8080
 
 WORKDIR /app
 

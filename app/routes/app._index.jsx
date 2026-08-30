@@ -19,7 +19,7 @@ import { CheckIcon, XIcon } from "@shopify/polaris-icons";
 import { authenticate } from "../shopify.server";
 import db from "../db.server";
 
-const BRAND_GREEN = "#0F3D2E";
+const BRAND_GREEN = "#3F8A63";
 
 export const loader = async ({ request }) => {
   try {
@@ -225,12 +225,16 @@ function ReviewsTable({ reviews, onStatusChange }) {
           </InlineStack>
         </IndexTable.Cell>
         <IndexTable.Cell>
-          <InlineStack gap="200" blockAlign="center">
-            <Thumbnail source={review.imageUrl || "https://cdn.shopify.com/s/files/1/0757/9955/files/empty-state.svg"} size="small" alt="" />
-            <Text as="span" variant="bodySm">Product {review.productId}</Text>
-          </InlineStack>
-        </IndexTable.Cell>
-        <IndexTable.Cell>
+  <InlineStack gap="200" blockAlign="center">
+    <div style={{
+      width: 32, height: 32, borderRadius: 6, background: "#F1F1F1",
+      display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+    }}>
+      <span style={{ fontSize: 14 }}>📦</span>
+    </div>
+    <Text as="span" variant="bodySm">Product {review.productId}</Text>
+  </InlineStack>
+</IndexTable.Cell>
           <BlockStack gap="050">
             <Stars rating={review.rating} />
             <Text as="span" variant="bodySm" tone="subdued">{review.rating.toFixed(1)}</Text>
@@ -243,33 +247,33 @@ function ReviewsTable({ reviews, onStatusChange }) {
           <Badge tone={tone}>{review.status}</Badge>
         </IndexTable.Cell>
         <IndexTable.Cell>
-          <InlineStack gap="150">
-            <button
-              onClick={(e) => { e.stopPropagation(); onStatusChange(review.id, "approve"); }}
-              disabled={review.status === "approved"}
-              style={{
-                border: "none", background: "#DFF3E8", borderRadius: 6, width: 28, height: 28,
-                display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer",
-                opacity: review.status === "approved" ? 0.4 : 1,
-              }}
-              title="Approve"
-            >
-              <Icon source={CheckIcon} tone="success" />
-            </button>
-            <button
-              onClick={(e) => { e.stopPropagation(); onStatusChange(review.id, "reject"); }}
-              disabled={review.status === "rejected"}
-              style={{
-                border: "none", background: "#FBE3E1", borderRadius: 6, width: 28, height: 28,
-                display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer",
-                opacity: review.status === "rejected" ? 0.4 : 1,
-              }}
-              title="Reject"
-            >
-              <Icon source={XIcon} tone="critical" />
-            </button>
-          </InlineStack>
-        </IndexTable.Cell>
+  <InlineStack gap="100">
+    <button
+      onClick={(e) => { e.stopPropagation(); onStatusChange(review.id, "approve"); }}
+      disabled={review.status === "approved"}
+      style={{
+        border: "1px solid #E1E1E1", background: "white", borderRadius: 6, width: 28, height: 28,
+        display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer",
+        opacity: review.status === "approved" ? 0.3 : 1,
+      }}
+      title="Approve"
+    >
+      <Icon source={CheckIcon} tone="success" />
+    </button>
+    <button
+      onClick={(e) => { e.stopPropagation(); onStatusChange(review.id, "reject"); }}
+      disabled={review.status === "rejected"}
+      style={{
+        border: "1px solid #E1E1E1", background: "white", borderRadius: 6, width: 28, height: 28,
+        display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer",
+        opacity: review.status === "rejected" ? 0.3 : 1,
+      }}
+      title="Reject"
+    >
+      <Icon source={XIcon} tone="critical" />
+    </button>
+  </InlineStack>
+</IndexTable.Cell>
       </IndexTable.Row>
     );
   });

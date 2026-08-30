@@ -224,17 +224,18 @@ function ReviewsTable({ reviews, onStatusChange }) {
             </BlockStack>
           </InlineStack>
         </IndexTable.Cell>
+                <IndexTable.Cell>
+          <InlineStack gap="200" blockAlign="center">
+            <div style={{
+              width: 32, height: 32, borderRadius: 6, background: "#F1F1F1",
+              display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+            }}>
+              <span style={{ fontSize: 14 }}>📦</span>
+            </div>
+            <Text as="span" variant="bodySm">Product {review.productId}</Text>
+          </InlineStack>
+        </IndexTable.Cell>
         <IndexTable.Cell>
-  <InlineStack gap="200" blockAlign="center">
-    <div style={{
-      width: 32, height: 32, borderRadius: 6, background: "#F1F1F1",
-      display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
-    }}>
-      <span style={{ fontSize: 14 }}>📦</span>
-    </div>
-    <Text as="span" variant="bodySm">Product {review.productId}</Text>
-  </InlineStack>
-</IndexTable.Cell>
           <BlockStack gap="050">
             <Stars rating={review.rating} />
             <Text as="span" variant="bodySm" tone="subdued">{review.rating.toFixed(1)}</Text>

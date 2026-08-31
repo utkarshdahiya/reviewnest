@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useLoaderData } from "react-router";
+import { useLoaderData, useFetcher } from "react-router";
 import {
   Page,
   Layout,
@@ -14,6 +14,7 @@ import {
   IndexTable,
   useIndexResourceState,
   Icon,
+  Button,
 } from "@shopify/polaris";
 import { CheckIcon, XIcon } from "@shopify/polaris-icons";
 import { authenticate } from "../shopify.server";
@@ -24,15 +25,29 @@ const BRAND_GREEN = "#3F8A63";
 export const loader = async ({ request }) => {
   try {
     const { session, admin } = await authenticate.admin(request);
+    
+    // 1. Fetch Reviews
     const reviews = await db.review.findMany({
       where: { shop: session.shop },
       orderBy: { createdAt: "desc" },
     });
 
+    // 2. Billing Guard Logic: Count reviews and check plan
+    const reviewCount = await db.review.count({
+      where: { shop: session.shop },
+    });
+
+    const settings = await db.shopSettings.findUnique({
+      where: { shop: session.shop },
+    }) || { plan: "starter" };
+
+    const limitReached = settings.plan === "starter" && reviewCount > 10;
+
+    // 3. Fetch Product Titles for the table
     const uniqueProductIds = [...new Set(reviews.map((r) => r.productId))];
     const gids = uniqueProductIds.map((id) => `gid://shopify/Product/${id}`);
-
     const productMap = {};
+    
     if (gids.length > 0) {
       try {
         const response = await admin.graphql(
@@ -71,13 +86,53 @@ export const loader = async ({ request }) => {
       productCollection: productMap[r.productId]?.collection || null,
     }));
 
-    return { reviews: reviewsWithProduct };
+    return { 
+      reviews: reviewsWithProduct,
+      reviewCount,
+      plan: settings.plan,
+      limitReached 
+    };
   } catch (error) {
     console.error("🔥 Loader error:", error);
     return new Response(
       JSON.stringify({ error: error.message, stack: error.stack }),
       { status: 500, headers: { "Content-Type": "application/json" } }
     );
+  }
+};
+
+export const action = async ({ request }) => {
+  try {
+    let data;
+    if (request.headers.get("Content-Type")?.includes("application/json")) {
+      data = await request.json();
+    } else {
+      const formData = await request.formData();
+      data = Object.fromEntries(formData.entries());
+    }
+
+    const { session } = await authenticate.admin(request);
+    let id = data.id;
+    const actionType = data.actionType;
+
+    if (!id || !actionType) {
+      return new Response(JSON.stringify({ error: "Missing data" }), { status: 400 });
+    }
+
+    // Handle ID type (Number vs String/UUID)
+    const numericId = Number(id);
+    const finalId = !isNaN(numericId) ? numericId : id;
+
+    if (actionType === "approve") {
+      await db.review.update({ where: { id: finalId }, data: { status: "approved" } });
+    } else if (actionType === "reject") {
+      await db.review.update({ where: { id: finalId }, data: { status: "rejected" } });
+    }
+
+    return new Response(JSON.stringify({ ok: true }), { headers: { "Content-Type": "application/json" } });
+  } catch (error) {
+    console.error("🔥 Action error:", error);
+    return new Response(JSON.stringify({ error: error.message }), { status: 500 });
   }
 };
 
@@ -88,7 +143,6 @@ function formatDate(dateString) {
   const yesterday = new Date(now);
   yesterday.setDate(now.getDate() - 1);
   const isYesterday = date.toDateString() === yesterday.toDateString();
-
   const time = date.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
   if (isToday) return `Today, ${time}`;
   if (isYesterday) return `Yesterday, ${time}`;
@@ -145,7 +199,6 @@ function RatingBreakdown({ reviews }) {
     star, count: reviews.filter((r) => r.rating === star).length,
   }));
   const max = Math.max(1, ...counts.map((c) => c.count));
-
   return (
     <Card>
       <BlockStack gap="300">
@@ -188,7 +241,6 @@ function ActivityChart({ reviews }) {
     }).length;
   });
   const max = Math.max(1, ...counts);
-
   return (
     <Card>
       <BlockStack gap="300">
@@ -237,12 +289,10 @@ function ReviewsTable({ reviews, onStatusChange }) {
   const resourceName = { singular: "review", plural: "reviews" };
   const { selectedResources, allResourcesSelected, handleSelectionChange } =
     useIndexResourceState(reviews);
-
   const rows = reviews.map((review, index) => {
     const tone =
       review.status === "approved" ? "success" :
       review.status === "rejected" ? "critical" : "attention";
-
     return (
       <IndexTable.Row
         id={review.id}
@@ -265,7 +315,7 @@ function ReviewsTable({ reviews, onStatusChange }) {
             </BlockStack>
           </InlineStack>
         </IndexTable.Cell>
-                        <IndexTable.Cell>
+        <IndexTable.Cell>
           <InlineStack gap="200" blockAlign="center">
             <div style={{
               width: 32, height: 32, borderRadius: 6, background: "#F1F1F1",
@@ -296,37 +346,36 @@ function ReviewsTable({ reviews, onStatusChange }) {
           <Badge tone={tone}>{review.status}</Badge>
         </IndexTable.Cell>
         <IndexTable.Cell>
-  <InlineStack gap="100">
-    <button
-      onClick={(e) => { e.stopPropagation(); onStatusChange(review.id, "approve"); }}
-      disabled={review.status === "approved"}
-      style={{
-        border: "1px solid #E1E1E1", background: "white", borderRadius: 6, width: 28, height: 28,
-        display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer",
-        opacity: review.status === "approved" ? 0.3 : 1,
-      }}
-      title="Approve"
-    >
-      <Icon source={CheckIcon} tone="success" />
-    </button>
-    <button
-      onClick={(e) => { e.stopPropagation(); onStatusChange(review.id, "reject"); }}
-      disabled={review.status === "rejected"}
-      style={{
-        border: "1px solid #E1E1E1", background: "white", borderRadius: 6, width: 28, height: 28,
-        display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer",
-        opacity: review.status === "rejected" ? 0.3 : 1,
-      }}
-      title="Reject"
-    >
-      <Icon source={XIcon} tone="critical" />
-    </button>
-  </InlineStack>
-</IndexTable.Cell>
+          <InlineStack gap="100">
+            <button
+              onClick={(e) => { e.stopPropagation(); onStatusChange(review.id, "approve"); }}
+              disabled={review.status === "approved"}
+              style={{
+                border: "1px solid #E1E1E1", background: "white", borderRadius: 6, width: 28, height: 28,
+                display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer",
+                opacity: review.status === "approved" ? 0.3 : 1,
+              }}
+              title="Approve"
+            >
+              <Icon source={CheckIcon} tone="success" />
+            </button>
+            <button
+              onClick={(e) => { e.stopPropagation(); onStatusChange(review.id, "reject"); }}
+              disabled={review.status === "rejected"}
+              style={{
+                border: "1px solid #E1E1E1", background: "white", borderRadius: 6, width: 28, height: 28,
+                display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer",
+                opacity: review.status === "rejected" ? 0.3 : 1,
+              }}
+              title="Reject"
+            >
+              <Icon source={XIcon} tone="critical" />
+            </button>
+          </InlineStack>
+        </IndexTable.Cell>
       </IndexTable.Row>
     );
   });
-
   return (
     <IndexTable
       resourceName={resourceName}
@@ -348,21 +397,18 @@ function ReviewsTable({ reviews, onStatusChange }) {
 }
 
 export default function ReviewsPage() {
-  const { reviews: initialReviews } = useLoaderData();
+  const { reviews: initialReviews, reviewCount, plan, limitReached } = useLoaderData();
   const [reviews, setReviews] = useState(initialReviews);
   const [selectedTab, setSelectedTab] = useState(0);
-
   const tabs = [
     { id: "all", content: "All" },
     { id: "pending", content: "Pending" },
     { id: "approved", content: "Approved" },
     { id: "rejected", content: "Rejected" },
   ];
-
   const statusFilter = tabs[selectedTab].id;
   const filteredReviews =
     statusFilter === "all" ? reviews : reviews.filter((r) => r.status === statusFilter);
-
   const avgRating = reviews.length
     ? (reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length).toFixed(1)
     : "—";
@@ -370,7 +416,7 @@ export default function ReviewsPage() {
   const approvedCount = reviews.filter((r) => r.status === "approved").length;
   const decidedCount = reviews.filter((r) => r.status !== "pending").length;
   const responseRate = reviews.length ? Math.round((decidedCount / reviews.length) * 100) : 0;
-
+  
   const handleStatusChange = async (id, actionType) => {
     const res = await fetch("/api/approve", {
       method: "POST",
@@ -390,7 +436,16 @@ export default function ReviewsPage() {
 
   return (
     <Page title="Product Reviews" subtitle="Manage and moderate customer feedback">
-      <BlockStack gap="500">
+      <BlockStack gap="400">
+        {limitReached && (
+          <Card backgroundColor="bg-surface-warning">
+            <BlockStack gap="200">
+              <p><strong>⚠️ Review Limit Reached!</strong></p>
+              <p>You've reached the limit of 10 reviews for the Starter plan. Upgrade to Pro for unlimited reviews and no branding!</p>
+              <Button variant="primary">Upgrade to Pro</Button>
+            </BlockStack>
+          </Card>
+        )}
         <Layout>
           <Layout.Section variant="oneThird">
             <StatCard label="Total reviews" value={reviews.length} emoji="📥" bg="#DFF3E8" />
@@ -402,7 +457,6 @@ export default function ReviewsPage() {
             <StatCard label="Needs attention" value={pendingCount} sub="to review" emoji="💬" bg="#FDF0DA" />
           </Layout.Section>
         </Layout>
-
         <Layout>
           <Layout.Section variant="oneHalf">
             <StatCard label="Published" value={approvedCount} sub="on storefront" emoji="✅" bg="#DFF3E8" />
@@ -411,7 +465,6 @@ export default function ReviewsPage() {
             <StatCard label="Response rate" value={`${responseRate}%`} sub="of all reviews" emoji="📨" bg="#E1EBFA" />
           </Layout.Section>
         </Layout>
-
         <Layout>
           <Layout.Section variant="oneHalf">
             <ActivityChart reviews={reviews} />
@@ -420,13 +473,11 @@ export default function ReviewsPage() {
             <RatingBreakdown reviews={reviews} />
           </Layout.Section>
         </Layout>
-
         <BlockStack gap="200">
           <Text as="h2" variant="headingMd">Moderation queue</Text>
           <Card padding="0">
             <Tabs tabs={tabs} selected={selectedTab} onSelect={setSelectedTab} />
           </Card>
-
           {filteredReviews.length === 0 ? (
             <Card>
               <EmptyState

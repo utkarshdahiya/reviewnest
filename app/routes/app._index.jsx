@@ -26,24 +26,29 @@ export const loader = async ({ request }) => {
   try {
     const { session, admin } = await authenticate.admin(request);
     
-    // 1. Fetch Reviews
     const reviews = await db.review.findMany({
       where: { shop: session.shop },
       orderBy: { createdAt: "desc" },
     });
 
-    // 2. Billing Guard Logic: Count reviews and check plan
     const reviewCount = await db.review.count({
       where: { shop: session.shop },
     });
 
-    const settings = await db.shopSettings.findUnique({
+    // FIX: Ensure a settings record exists with a plan
+    let settings = await db.shopSettings.findUnique({
       where: { shop: session.shop },
-    }) || { plan: "starter" };
+    });
 
-    const limitReached = settings.plan === "starter" && reviewCount > 10;
+    if (!settings) {
+      settings = await db.shopSettings.create({
+        data: { shop: session.shop, plan: "starter" }
+      });
+    }
 
-    // 3. Fetch Product Titles for the table
+    const currentPlan = settings.plan || "starter";
+    const limitReached = currentPlan.toLowerCase() === "starter" && reviewCount > 10;
+
     const uniqueProductIds = [...new Set(reviews.map((r) => r.productId))];
     const gids = uniqueProductIds.map((id) => `gid://shopify/Product/${id}`);
     const productMap = {};
@@ -89,7 +94,7 @@ export const loader = async ({ request }) => {
     return { 
       reviews: reviewsWithProduct,
       reviewCount,
-      plan: settings.plan,
+      plan: currentPlan,
       limitReached 
     };
   } catch (error) {
@@ -110,16 +115,11 @@ export const action = async ({ request }) => {
       const formData = await request.formData();
       data = Object.fromEntries(formData.entries());
     }
-
     const { session } = await authenticate.admin(request);
     let id = data.id;
     const actionType = data.actionType;
+    if (!id || !actionType) return new Response(JSON.stringify({ error: "Missing data" }), { status: 400 });
 
-    if (!id || !actionType) {
-      return new Response(JSON.stringify({ error: "Missing data" }), { status: 400 });
-    }
-
-    // Handle ID type (Number vs String/UUID)
     const numericId = Number(id);
     const finalId = !isNaN(numericId) ? numericId : id;
 
@@ -128,10 +128,8 @@ export const action = async ({ request }) => {
     } else if (actionType === "reject") {
       await db.review.update({ where: { id: finalId }, data: { status: "rejected" } });
     }
-
     return new Response(JSON.stringify({ ok: true }), { headers: { "Content-Type": "application/json" } });
   } catch (error) {
-    console.error("🔥 Action error:", error);
     return new Response(JSON.stringify({ error: error.message }), { status: 500 });
   }
 };
@@ -437,6 +435,11 @@ export default function ReviewsPage() {
   return (
     <Page title="Product Reviews" subtitle="Manage and moderate customer feedback">
       <BlockStack gap="400">
+        {/* DEBUG LINE: This will tell us if the code is actually deployed */}
+        <div style={{ fontSize: 10, color: 'gray', textAlign: 'center' }}>
+          Debug: Plan={plan} | Count={reviewCount} | LimitReached={String(limitReached)}
+        </div>
+
         {limitReached && (
           <Card backgroundColor="bg-surface-warning">
             <BlockStack gap="200">
@@ -485,7 +488,7 @@ export default function ReviewsPage() {
                 image="https://cdn.shopify.com/s/files/1/0757/9955/files/empty-state.svg"
               >
                 <p>Once customers submit reviews, they'll show up here.</p>
-              </EmptyState>
+              </SemptyState>
             </Card>
           ) : (
             <Card padding="0">

@@ -1,19 +1,42 @@
 {% comment %}
+  ReviewNest Product Reviews + Q&A Theme App Extension
+
   This is a Theme App Extension block. Once your app is installed,
   merchants can drag this block onto their product page from the
   theme editor — no code editing needed on their end.
 {% endcomment %}
 
-<div id="review-widget" data-shop="{{ shop.permanent_domain }}" data-product-id="{{ product.id }}" class="rn-widget">
+<div
+  id="review-widget"
+  data-shop="{{ shop.permanent_domain | escape }}"
+  data-product-id="{{ product.id }}"
+  class="rn-widget"
+>
   <div class="rn-summary" id="review-summary">Loading reviews...</div>
+
   <div class="rn-list" id="review-list"></div>
 
   <div class="rn-form-card">
     <h3 class="rn-form-title">Write a review</h3>
+
     <form id="review-form" class="rn-form">
       <div class="rn-form-row">
-        <input type="text" name="authorName" placeholder="Your name" required class="rn-input" />
-        <select name="rating" required class="rn-select">
+        <input
+          type="text"
+          name="authorName"
+          placeholder="Your name"
+          required
+          maxlength="100"
+          autocomplete="name"
+          class="rn-input"
+        />
+
+        <select
+          name="rating"
+          required
+          class="rn-select"
+          aria-label="Rating"
+        >
           <option value="5">★★★★★</option>
           <option value="4">★★★★</option>
           <option value="3">★★★</option>
@@ -21,187 +44,760 @@
           <option value="1">★</option>
         </select>
       </div>
-      <input type="text" name="title" placeholder="Review title (optional)" class="rn-input rn-input-full" />
-      <textarea name="body" placeholder="Tell us what you think" required class="rn-textarea"></textarea>
 
-      <div id="rn-photo-field" class="rn-media-field" style="display:none;">
-        <label class="rn-media-label">Add a photo (optional)</label>
-        <input type="file" name="photo" accept="image/*" class="rn-file-input" />
+      <input
+        type="text"
+        name="title"
+        placeholder="Review title (optional)"
+        maxlength="200"
+        class="rn-input rn-input-full"
+      />
+
+      <textarea
+        name="body"
+        placeholder="Tell us what you think"
+        required
+        maxlength="5000"
+        class="rn-textarea"
+      ></textarea>
+
+      <div
+        id="rn-photo-field"
+        class="rn-media-field"
+        style="display:none;"
+      >
+        <label class="rn-media-label">
+          Add a photo (optional)
+        </label>
+
+        <input
+          type="file"
+          name="photo"
+          accept="image/jpeg,image/png,image/webp"
+          class="rn-file-input"
+        />
+
+        <small class="rn-media-help">
+          JPG, PNG or WebP. Maximum 5 MB.
+        </small>
       </div>
 
-      <button type="submit" class="rn-button">Submit review</button>
-    </form>
-  </div>
-  <div class="rn-qa-section">
-  <h3 class="rn-qa-title">Questions &amp; Answers</h3>
-  <div class="rn-qa-list" id="qa-list"></div>
+      <button
+        type="submit"
+        class="rn-button"
+        id="rn-review-submit"
+      >
+        Submit review
+      </button>
 
-  <div class="rn-form-card">
-    <h3 class="rn-form-title">Ask a question</h3>
-    <form id="qa-form" class="rn-form">
-      <input type="text" name="authorName" placeholder="Your name" required class="rn-input rn-input-full" />
-      <textarea name="questionText" placeholder="What would you like to know?" required class="rn-textarea"></textarea>
-      <button type="submit" class="rn-button">Submit question</button>
+      <p
+        id="rn-review-message"
+        class="rn-form-message"
+        aria-live="polite"
+      ></p>
     </form>
   </div>
-</div>
+
+  <div class="rn-qa-section">
+    <h3 class="rn-qa-title">Questions &amp; Answers</h3>
+
+    <div class="rn-qa-list" id="qa-list"></div>
+
+    <div class="rn-form-card">
+      <h3 class="rn-form-title">Ask a question</h3>
+
+      <form id="qa-form" class="rn-form">
+        <input
+          type="text"
+          name="authorName"
+          placeholder="Your name"
+          required
+          maxlength="100"
+          autocomplete="name"
+          class="rn-input rn-input-full"
+        />
+
+        <textarea
+          name="questionText"
+          placeholder="What would you like to know?"
+          required
+          maxlength="2000"
+          class="rn-textarea"
+        ></textarea>
+
+        <button
+          type="submit"
+          class="rn-button"
+          id="rn-question-submit"
+        >
+          Submit question
+        </button>
+
+        <p
+          id="rn-question-message"
+          class="rn-form-message"
+          aria-live="polite"
+        ></p>
+      </form>
+    </div>
+  </div>
 </div>
 
 <style>
-  .rn-widget { max-width: 640px; margin: 40px auto; font-family: inherit; }
-  .rn-summary { font-size: 20px; font-weight: 600; color: #202223; margin-bottom: 16px; }
-  .rn-list { margin-bottom: 32px; }
-  .rn-review-item { padding: 16px 0; border-bottom: 1px solid #e3e3e3; }
-  .rn-review-item:last-child { border-bottom: none; }
-  .rn-review-header { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
-  .rn-review-author { font-weight: 600; color: #202223; }
-  .rn-stars { color: #ffb400; letter-spacing: 1px; }
-  .rn-review-title { font-weight: 600; margin: 4px 0; }
-  .rn-review-body { color: #4a4a4a; line-height: 1.5; }
-  .rn-review-media { margin-top: 10px; display: flex; gap: 10px; flex-wrap: wrap; }
-  .rn-review-media img { max-width: 140px; border-radius: 8px; display: block; }
-  .rn-review-media video { max-width: 220px; border-radius: 8px; display: block; }
-  .rn-empty { color: #6b6b6b; margin-bottom: 32px; }
-  .rn-form-card { background: #fafafa; border: 1px solid #e3e3e3; border-radius: 12px; padding: 24px; }
-  .rn-form-title { margin: 0 0 16px 0; font-size: 18px; font-weight: 600; }
-  .rn-form { display: flex; flex-direction: column; gap: 12px; }
-  .rn-form-row { display: flex; gap: 12px; }
-  .rn-input, .rn-select, .rn-textarea { border: 1px solid #c9c9c9; border-radius: 8px; padding: 10px 12px; font-size: 14px; font-family: inherit; }
-  .rn-input { flex: 1; }
-  .rn-input-full { width: 100%; box-sizing: border-box; }
-  .rn-select { width: 110px; }
-  .rn-textarea { width: 100%; box-sizing: border-box; min-height: 90px; resize: vertical; }
-  .rn-media-field { display: flex; flex-direction: column; gap: 6px; }
-  .rn-media-label { font-size: 13px; font-weight: 600; color: #4a4a4a; }
-  .rn-file-input { font-size: 13px; }
-  .rn-button { align-self: flex-start; background: #202223; color: #fff; border: none; border-radius: 8px; padding: 12px 24px; font-size: 14px; font-weight: 600; cursor: pointer; }
-  .rn-button:hover { background: #000; }
-  .rn-qa-section { margin-top: 40px; }
-  .rn-qa-title { font-size: 20px; font-weight: 600; color: #202223; margin-bottom: 16px; }
-  .rn-qa-list { margin-bottom: 24px; }
-  .rn-qa-item { padding: 16px 0; border-bottom: 1px solid #e3e3e3; }
-  .rn-qa-item:last-child { border-bottom: none; }
-  .rn-qa-question { font-weight: 600; color: #202223; margin-bottom: 6px; }
-  .rn-qa-answer { color: #4a4a4a; line-height: 1.5; padding-left: 12px; border-left: 2px solid #e3e3e3; }
-  .rn-qa-empty { color: #6b6b6b; margin-bottom: 16px; }
+  .rn-widget {
+    max-width: 640px;
+    margin: 40px auto;
+    font-family: inherit;
+  }
+
+  .rn-summary {
+    font-size: 20px;
+    font-weight: 600;
+    color: #202223;
+    margin-bottom: 16px;
+  }
+
+  .rn-list {
+    margin-bottom: 32px;
+  }
+
+  .rn-review-item {
+    padding: 16px 0;
+    border-bottom: 1px solid #e3e3e3;
+  }
+
+  .rn-review-item:last-child {
+    border-bottom: none;
+  }
+
+  .rn-review-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 4px;
+  }
+
+  .rn-review-author {
+    font-weight: 600;
+    color: #202223;
+  }
+
+  .rn-stars {
+    color: #ffb400;
+    letter-spacing: 1px;
+  }
+
+  .rn-review-title {
+    font-weight: 600;
+    margin: 4px 0;
+  }
+
+  .rn-review-body {
+    color: #4a4a4a;
+    line-height: 1.5;
+    white-space: pre-wrap;
+  }
+
+  .rn-review-media {
+    margin-top: 10px;
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .rn-review-media img {
+    max-width: 140px;
+    max-height: 140px;
+    object-fit: cover;
+    border-radius: 8px;
+    display: block;
+  }
+
+  .rn-review-media video {
+    max-width: 220px;
+    border-radius: 8px;
+    display: block;
+  }
+
+  .rn-empty {
+    color: #6b6b6b;
+    margin-bottom: 32px;
+  }
+
+  .rn-form-card {
+    background: #fafafa;
+    border: 1px solid #e3e3e3;
+    border-radius: 12px;
+    padding: 24px;
+  }
+
+  .rn-form-title {
+    margin: 0 0 16px 0;
+    font-size: 18px;
+    font-weight: 600;
+  }
+
+  .rn-form {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .rn-form-row {
+    display: flex;
+    gap: 12px;
+  }
+
+  .rn-input,
+  .rn-select,
+  .rn-textarea {
+    border: 1px solid #c9c9c9;
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 14px;
+    font-family: inherit;
+    box-sizing: border-box;
+  }
+
+  .rn-input {
+    flex: 1;
+  }
+
+  .rn-input-full {
+    width: 100%;
+  }
+
+  .rn-select {
+    width: 110px;
+  }
+
+  .rn-textarea {
+    width: 100%;
+    min-height: 90px;
+    resize: vertical;
+  }
+
+  .rn-media-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .rn-media-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: #4a4a4a;
+  }
+
+  .rn-file-input {
+    font-size: 13px;
+  }
+
+  .rn-media-help {
+    color: #6b6b6b;
+    font-size: 12px;
+  }
+
+  .rn-button {
+    align-self: flex-start;
+    background: #202223;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 12px 24px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .rn-button:hover {
+    background: #000;
+  }
+
+  .rn-button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  .rn-form-message {
+    margin: 0;
+    font-size: 13px;
+  }
+
+  .rn-qa-section {
+    margin-top: 40px;
+  }
+
+  .rn-qa-title {
+    font-size: 20px;
+    font-weight: 600;
+    color: #202223;
+    margin-bottom: 16px;
+  }
+
+  .rn-qa-list {
+    margin-bottom: 24px;
+  }
+
+  .rn-qa-item {
+    padding: 16px 0;
+    border-bottom: 1px solid #e3e3e3;
+  }
+
+  .rn-qa-item:last-child {
+    border-bottom: none;
+  }
+
+  .rn-qa-question {
+    font-weight: 600;
+    color: #202223;
+    margin-bottom: 6px;
+    white-space: pre-wrap;
+  }
+
+  .rn-qa-answer {
+    color: #4a4a4a;
+    line-height: 1.5;
+    padding-left: 12px;
+    border-left: 2px solid #e3e3e3;
+    white-space: pre-wrap;
+  }
+
+  .rn-qa-empty {
+    color: #6b6b6b;
+    margin-bottom: 16px;
+  }
+
+  @media (max-width: 600px) {
+    .rn-form-row {
+      flex-direction: column;
+    }
+
+    .rn-select {
+      width: 100%;
+    }
+  }
 </style>
 
 <script>
   (function () {
     const widget = document.getElementById("review-widget");
+
+    if (!widget) {
+      return;
+    }
+
     const shop = widget.dataset.shop;
     const productId = widget.dataset.productId;
-    const apiBase = "https://reviewnest-production.up.railway.app/api/reviews";
+
+    /*
+     * Keep this identical to the production application URL.
+     *
+     * Once you move away from Railway, change this ONE value
+     * together with shopify.app.toml.
+     */
+    const apiBase =
+      "https://reviewnest-production.up.railway.app/api/reviews";
+
+    const qaApiBase =
+      apiBase.replace("/api/reviews", "/api/questions");
+
+    const reviewSummary =
+      document.getElementById("review-summary");
+
+    const reviewList =
+      document.getElementById("review-list");
+
+    const qaList =
+      document.getElementById("qa-list");
+
+    const photoField =
+      document.getElementById("rn-photo-field");
+
+    const reviewForm =
+      document.getElementById("review-form");
+
+    const qaForm =
+      document.getElementById("qa-form");
+
+    const reviewMessage =
+      document.getElementById("rn-review-message");
+
+    const questionMessage =
+      document.getElementById("rn-question-message");
+
+    const reviewSubmit =
+      document.getElementById("rn-review-submit");
+
+    const questionSubmit =
+      document.getElementById("rn-question-submit");
+
+    function escapeHtml(value) {
+      return String(value ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    function safeImageUrl(value) {
+      if (typeof value !== "string") {
+        return "";
+      }
+
+      /*
+       * Only allow HTTPS images.
+       * Data URLs are deliberately not rendered here.
+       */
+      if (!/^https:\/\//i.test(value)) {
+        return "";
+      }
+
+      return value;
+    }
+
+    function setMessage(element, message, isError) {
+      element.textContent = message;
+      element.style.color = isError ? "#b42318" : "#217a4b";
+    }
 
     function fileToBase64(file) {
       return new Promise((resolve, reject) => {
         const reader = new FileReader();
+
         reader.onload = () => resolve(reader.result);
-        reader.onerror = reject;
+        reader.onerror = () => reject(reader.error);
+
         reader.readAsDataURL(file);
       });
     }
 
-    fetch(`${apiBase}?shop=${shop}&productId=${productId}`)
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.settings.allowPhoto) document.getElementById("rn-photo-field").style.display = "flex";
+    function renderReviews(data) {
+      if (!data || !data.summary) {
+        reviewSummary.textContent = "Unable to load reviews.";
+        reviewList.textContent = "";
+        return;
+      }
 
-        if (data.summary.count === 0) {
-          document.getElementById("review-summary").innerText = "No reviews yet";
-          document.getElementById("review-list").innerHTML =
-            '<p class="rn-empty">Be the first to share what you think about this product!</p>';
+      const count = Number(data.summary.count || 0);
+      const average = Number(data.summary.average || 0);
+
+      if (count === 0) {
+        reviewSummary.textContent = "No reviews yet";
+
+        reviewList.innerHTML =
+          '<p class="rn-empty">Be the first to share what you think about this product!</p>';
+
+        return;
+      }
+
+      const roundedAverage = Math.max(
+        0,
+        Math.min(5, Math.round(average))
+      );
+
+      reviewSummary.textContent =
+        `${"★".repeat(roundedAverage)}` +
+        `${"☆".repeat(5 - roundedAverage)}` +
+        ` (${count} review${count === 1 ? "" : "s"})`;
+
+      /*
+       * We still use innerHTML for the DOM template,
+       * but every customer-controlled text value is escaped.
+       */
+      reviewList.innerHTML = (data.reviews || [])
+        .map((review) => {
+          const authorName =
+            escapeHtml(review.authorName || "Anonymous");
+
+          const title =
+            escapeHtml(review.title || "");
+
+          const body =
+            escapeHtml(review.body || "");
+
+          const rating = Math.max(
+            1,
+            Math.min(5, Number(review.rating) || 1)
+          );
+
+          const imageUrl =
+            safeImageUrl(review.imageUrl);
+
+          const media = imageUrl
+            ? `
+              <div class="rn-review-media">
+                <img
+                  src="${escapeHtml(imageUrl)}"
+                  alt="Review photo"
+                  loading="lazy"
+                  referrerpolicy="no-referrer"
+                />
+              </div>
+            `
+            : "";
+
+          return `
+            <div class="rn-review-item">
+              <div class="rn-review-header">
+                <span class="rn-review-author">
+                  ${authorName}
+                </span>
+
+                <span class="rn-stars" aria-label="${rating} out of 5 stars">
+                  ${"★".repeat(rating)}${"☆".repeat(5 - rating)}
+                </span>
+              </div>
+
+              ${
+                title
+                  ? `<div class="rn-review-title">${title}</div>`
+                  : ""
+              }
+
+              <div class="rn-review-body">
+                ${body}
+              </div>
+
+              ${media}
+            </div>
+          `;
+        })
+        .join("");
+    }
+
+    async function loadReviews() {
+      try {
+        const response = await fetch(
+          `${apiBase}?shop=${encodeURIComponent(shop)}&productId=${encodeURIComponent(productId)}`
+        );
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(
+            data.error || "Unable to load reviews."
+          );
+        }
+
+        if (data.settings?.allowPhoto) {
+          photoField.style.display = "flex";
+        }
+
+        renderReviews(data);
+      } catch (error) {
+        console.error("Review loading error:", error);
+        reviewSummary.textContent = "Reviews";
+        reviewList.innerHTML =
+          '<p class="rn-empty">Reviews are temporarily unavailable.</p>';
+      }
+    }
+
+    async function loadQuestions() {
+      try {
+        const response = await fetch(
+          `${qaApiBase}?shop=${encodeURIComponent(shop)}&productId=${encodeURIComponent(productId)}`
+        );
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(
+            data.error || "Unable to load questions."
+          );
+        }
+
+        if (!data.questions || data.questions.length === 0) {
+          qaList.innerHTML =
+            '<p class="rn-qa-empty">No questions yet. Be the first to ask!</p>';
+
           return;
         }
-        document.getElementById("review-summary").innerText =
-          `${"★".repeat(Math.round(data.summary.average))}${"☆".repeat(5 - Math.round(data.summary.average))} (${data.summary.count} review${data.summary.count === 1 ? "" : "s"})`;
-        document.getElementById("review-list").innerHTML = data.reviews
-          .map((r) => {
-            let media = "";
-            if (r.imageUrl) {
-              media = `<div class="rn-review-media">
-                <img src="${r.imageUrl}" alt="Review photo" />
-              </div>`;
-            }
+
+        qaList.innerHTML = data.questions
+          .map((question) => {
+            const questionText =
+              escapeHtml(question.questionText || "");
+
+            const answerText =
+              escapeHtml(question.answerText || "");
+
             return `
-              <div class="rn-review-item">
-                <div class="rn-review-header">
-                  <span class="rn-review-author">${r.authorName}</span>
-                  <span class="rn-stars">${"★".repeat(r.rating)}${"☆".repeat(5 - r.rating)}</span>
+              <div class="rn-qa-item">
+                <div class="rn-qa-question">
+                  Q: ${questionText}
                 </div>
-                ${r.title ? `<div class="rn-review-title">${r.title}</div>` : ""}
-                <div class="rn-review-body">${r.body}</div>
-                ${media}
+
+                <div class="rn-qa-answer">
+                  A: ${answerText}
+                </div>
               </div>
             `;
           })
           .join("");
-      });
+      } catch (error) {
+        console.error("Question loading error:", error);
 
-    document.getElementById("review-form").addEventListener("submit", async function (e) {
-      e.preventDefault();
-      const form = new FormData(e.target);
-
-      let imageUrl = null;
-
-      const photoFile = form.get("photo");
-      if (photoFile && photoFile.size > 0) {
-        imageUrl = await fileToBase64(photoFile);
+        qaList.innerHTML =
+          '<p class="rn-qa-empty">Questions are temporarily unavailable.</p>';
       }
+    }
 
-      fetch(apiBase, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          shop,
-          productId,
-          authorName: form.get("authorName"),
-          rating: Number(form.get("rating")),
-          title: form.get("title"),
-          body: form.get("body"),
-          imageUrl,
-        }),
-      }).then(() => {
-        alert("Thanks! Your review will show once it's approved.");
-        e.target.reset();
-      });
-    });
-    const qaApiBase = apiBase.replace("/api/reviews", "/api/questions");
+    reviewForm.addEventListener(
+      "submit",
+      async function (event) {
+        event.preventDefault();
 
-    fetch(`${qaApiBase}?shop=${shop}&productId=${productId}`)
-      .then((res) => res.json())
-      .then((data) => {
-        const qaList = document.getElementById("qa-list");
-        if (!data.questions || data.questions.length === 0) {
-          qaList.innerHTML = '<p class="rn-qa-empty">No questions yet. Be the first to ask!</p>';
-          return;
+        setMessage(reviewMessage, "", false);
+
+        reviewSubmit.disabled = true;
+        reviewSubmit.textContent = "Submitting...";
+
+        try {
+          const form = new FormData(event.target);
+
+          let imageUrl = null;
+
+          const photoFile = form.get("photo");
+
+          if (
+            photoFile &&
+            photoFile instanceof File &&
+            photoFile.size > 0
+          ) {
+            const maxSize =
+              5 * 1024 * 1024;
+
+            const allowedTypes = [
+              "image/jpeg",
+              "image/png",
+              "image/webp",
+            ];
+
+            if (photoFile.size > maxSize) {
+              throw new Error(
+                "Image must be smaller than 5 MB."
+              );
+            }
+
+            if (!allowedTypes.includes(photoFile.type)) {
+              throw new Error(
+                "Please upload a JPG, PNG or WebP image."
+              );
+            }
+
+            imageUrl =
+              await fileToBase64(photoFile);
+          }
+
+          const response = await fetch(apiBase, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              shop,
+              productId,
+              authorName: form.get("authorName"),
+              rating: Number(form.get("rating")),
+              title: form.get("title"),
+              body: form.get("body"),
+              imageUrl,
+            }),
+          });
+
+          const data = await response.json();
+
+          if (!response.ok) {
+            throw new Error(
+              data.error || "Unable to submit review."
+            );
+          }
+
+          setMessage(
+            reviewMessage,
+            "Thanks! Your review will show once it's approved.",
+            false
+          );
+
+          event.target.reset();
+        } catch (error) {
+          console.error("Review submission error:", error);
+
+          setMessage(
+            reviewMessage,
+            error.message || "Unable to submit review.",
+            true
+          );
+        } finally {
+          reviewSubmit.disabled = false;
+          reviewSubmit.textContent = "Submit review";
         }
-        qaList.innerHTML = data.questions.map((q) => `
-          <div class="rn-qa-item">
-            <div class="rn-qa-question">Q: ${q.questionText}</div>
-            <div class="rn-qa-answer">A: ${q.answerText}</div>
-          </div>
-        `).join("");
-      });
+      }
+    );
 
-    document.getElementById("qa-form").addEventListener("submit", async function (e) {
-      e.preventDefault();
-      const form = new FormData(e.target);
+    qaForm.addEventListener(
+      "submit",
+      async function (event) {
+        event.preventDefault();
 
-      await fetch(qaApiBase, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          shop,
-          productId,
-          authorName: form.get("authorName"),
-          questionText: form.get("questionText"),
-        }),
-      }).then(() => {
-        alert("Thanks! Your question will show once it's answered.");
-        e.target.reset();
-      });
-    });
+        setMessage(questionMessage, "", false);
+
+        questionSubmit.disabled = true;
+        questionSubmit.textContent = "Submitting...";
+
+        try {
+          const form = new FormData(event.target);
+
+          const response = await fetch(qaApiBase, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              shop,
+              productId,
+              authorName: form.get("authorName"),
+              questionText: form.get("questionText"),
+            }),
+          });
+
+          const data = await response.json();
+
+          if (!response.ok) {
+            throw new Error(
+              data.error || "Unable to submit question."
+            );
+          }
+
+          setMessage(
+            questionMessage,
+            "Thanks! Your question will show once it's answered.",
+            false
+          );
+
+          event.target.reset();
+        } catch (error) {
+          console.error(
+            "Question submission error:",
+            error
+          );
+
+          setMessage(
+            questionMessage,
+            error.message || "Unable to submit question.",
+            true
+          );
+        } finally {
+          questionSubmit.disabled = false;
+          questionSubmit.textContent = "Submit question";
+        }
+      }
+    );
+
+    loadReviews();
+    loadQuestions();
   })();
 </script>
 

@@ -20,8 +20,7 @@ import { CheckIcon, XIcon } from "@shopify/polaris-icons";
 import { authenticate } from "../shopify.server";
 import db from "../db.server";
 
-const BRAND_GREEN = "#1B5E20";
-const STAR_YELLOW = "#FBC02D";
+const BRAND_GREEN = "#3F8A63";
 
 export const loader = async ({ request }) => {
   try {
@@ -289,32 +288,6 @@ function Avatar({ name, size = 40 }) {
   );
 }
 
-function Logo() {
-  return (
-    <InlineStack gap="200" blockAlign="center">
-      <svg width="40" height="40" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-        {/* The Nest - series of arcs */}
-        <path d="M20 70C20 85 30 90 50 90C70 90 80 85 80 70C80 60 70 55 50 55C30 55 20 60 20 70Z" stroke={BRAND_GREEN} strokeWidth="4" fill="none" />
-        <path d="M25 75C25 82 35 87 50 87C65 87 75 82 75 75" stroke={BRAND_GREEN} strokeWidth="3" fill="none" />
-        <path d="M30 78C30 80 40 83 50 83C60 83 70 80 70 78" stroke={BRAND_GREEN} strokeWidth="2" fill="none" />
-        <path d="M15 72C15 80 30 85 50 85C70 85 85 80 85 72" stroke={BRAND_GREEN} strokeWidth="2" fill="none" />
-
-        {/* The Star */}
-        <path
-          d="M50 15L57 35L78 35L62 48L68 68L50 55L32 68L38 48L22 35L43 35Z"
-          fill={STAR_YELLOW}
-          stroke={BRAND_GREEN}
-          strokeWidth="3"
-          strokeLinejoin="round"
-        />
-      </svg>
-      <Text as="h1" variant="headingLg" style={{ color: BRAND_GREEN, fontWeight: 'bold', letterSpacing: '-0.5px' }}>
-        ReviewNest
-      </Text>
-    </InlineStack>
-  );
-}
-
 function ReviewsTable({ reviews, onStatusChange }) {
   const resourceName = { singular: "review", plural: "reviews" };
   const { selectedResources, allResourcesSelected, handleSelectionChange } =
@@ -336,7 +309,7 @@ function ReviewsTable({ reviews, onStatusChange }) {
             <BlockStack gap="050">
               <InlineStack gap="150" blockAlign="center">
                 <Text as="span" fontWeight="semibold">{review.authorName || "Anonymous"}</Text>
-                {review.imageUrl && <Badge tone="info" size="small">Photo ✨ Pro</Badge>}
+                {review.imageUrl && <Badge tone="info" size="small">Photo</Badge>}
               </InlineStack>
               {review.title && <Text as="span" variant="bodySm">{review.title}</Text>}
               <Text as="span" variant="bodySm" tone="subdued" truncate>
@@ -464,20 +437,15 @@ export default function ReviewsPage() {
     }
   };
 
-  const handleUpgrade = () => {
-    window.location.href = "/app/billing";
-  };
-
   return (
     <Page title="Product Reviews" subtitle="Manage and moderate customer feedback">
       <BlockStack gap="400">
-        <Logo />
         {limitReached && (
           <Card backgroundColor="bg-surface-warning">
             <BlockStack gap="200">
               <p><strong>⚠️ Review Limit Reached!</strong></p>
               <p>You've reached the limit of 10 reviews for the Starter plan. Upgrade to Pro for unlimited reviews and no branding!</p>
-              <Button variant="primary" onClick={handleUpgrade}>Upgrade to Pro</Button>
+              <Button variant="primary">Upgrade to Pro</Button>
             </BlockStack>
           </Card>
         )}

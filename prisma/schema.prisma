@@ -50,6 +50,7 @@ model ShopSettings {
   shop        String   @id
   allowPhoto  Boolean  @default(false)
   allowVideo  Boolean  @default(false)
+  plan        String   @default("starter")
 }
 
 model ReviewRequest {

@@ -49,13 +49,13 @@ export async function getAverageRating(shop, productId) {
 export async function getShopSettings(shop) {
   const existing = await db.shopSettings.findUnique({ where: { shop } });
   if (existing) return existing;
-  return { shop, allowPhoto: false, allowVideo: false };
+  return { shop, allowPhoto: false, allowVideo: false, plan: "starter" };
 }
 
-export async function updateShopSettings(shop, { allowPhoto, allowVideo }) {
+export async function updateShopSettings(shop, { allowPhoto, allowVideo, plan }) {
   return db.shopSettings.upsert({
     where: { shop },
-    update: { allowPhoto, allowVideo },
-    create: { shop, allowPhoto, allowVideo },
+    update: { allowPhoto, allowVideo, plan },
+    create: { shop, allowPhoto, allowVideo, plan: plan || "starter" },
   });
 }

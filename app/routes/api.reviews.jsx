@@ -69,6 +69,17 @@ export async function action({ request }) {
       });
     }
 
+    // PLAN RESTRICTION: Block photos for Starter plan
+    if (imageUrl) {
+      const settings = await getShopSettings(shop);
+      if (settings.plan === "starter") {
+        return new Response(JSON.stringify({ error: "Photo reviews are a Pro feature. Please upgrade your plan to enable photo uploads!" }), {
+          status: 403,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        });
+      }
+    }
+
     const review = await createReview({ shop, productId, authorName, rating, title, body, imageUrl });
     return new Response(JSON.stringify({ ok: true, review }), {
       status: 200,

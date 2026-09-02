@@ -1,46 +1,72 @@
-import { json } from "@remix-run/node";
+import { json } from "react-router";
 import db from "../db.server";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "Content-Type",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Requested-With",
   "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
 };
 
+function corsJson(data, init = {}) {
+  return json(data, {
+    ...init,
+    headers: {
+      "Content-Type": "application/json",
+      ...CORS_HEADERS,
+      ...(init.headers || {}),
+    },
+  });
+}
+
 export async function loader({ request }) {
+  if (request.method === "OPTIONS") {
+    return new Response(null, {
+      status: 204,
+      headers: CORS_HEADERS,
+    });
+  }
+
   const url = new URL(request.url);
   const shop = url.searchParams.get("shop");
   const productId = url.searchParams.get("productId");
 
   if (!shop || !productId) {
-    return json(
-      { error: "shop and productId are required" },
-      { status: 400, headers: CORS_HEADERS }
+    return corsJson(
+      { error: "Missing shop or productId" },
+      { status: 400 }
     );
   }
 
-  const questions = await db.question.findMany({
-    where: {
-      shop,
-      productId,
-      status: "answered",
-    },
-    select: {
-      id: true,
-      questionText: true,
-      answerText: true,
-      authorName: true,
-      createdAt: true,
-    },
-    orderBy: {
-      createdAt: "desc",
-    },
-  });
+  try {
+    const questions = await db.question.findMany({
+      where: {
+        shop,
+        productId: String(productId),
+        status: "answered",
+      },
+      select: {
+        id: true,
+        authorName: true,
+        questionText: true,
+        answerText: true,
+        createdAt: true,
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+    });
 
-  return json(
-    { questions },
-    { headers: CORS_HEADERS }
-  );
+    return corsJson({
+      questions,
+    });
+  } catch (error) {
+    console.error("Questions loader error:", error);
+
+    return corsJson(
+      { error: "Unable to load questions" },
+      { status: 500 }
+    );
+  }
 }
 
 export async function action({ request }) {
@@ -51,62 +77,104 @@ export async function action({ request }) {
     });
   }
 
-  try {
-    const body = await request.json();
+  if (request.method !== "POST") {
+    return corsJson(
+      { error: "Method not allowed" },
+      { status: 405 }
+    );
+  }
 
-    const {
-      shop,
-      productId,
-      authorName,
-      questionText,
-    } = body;
+  try {
+    const payload = await request.json();
+
+    const shop =
+      typeof payload.shop === "string"
+        ? payload.shop.trim().toLowerCase()
+        : "";
+
+    const productId =
+      typeof payload.productId === "string" ||
+      typeof payload.productId === "number"
+        ? String(payload.productId).trim()
+        : "";
+
+    const authorName =
+      typeof payload.authorName === "string"
+        ? payload.authorName.trim()
+        : "";
+
+    const questionText =
+      typeof payload.questionText === "string"
+        ? payload.questionText.trim()
+        : "";
 
     if (!shop || !productId || !questionText) {
-      return json(
+      return corsJson(
         { error: "Missing required fields" },
-        { status: 400, headers: CORS_HEADERS }
+        { status: 400 }
       );
     }
 
-    if (typeof questionText !== "string" || questionText.length > 2000) {
-      return json(
-        { error: "Question is too long" },
-        { status: 400, headers: CORS_HEADERS }
+    if (shop.length > 255) {
+      return corsJson(
+        { error: "Invalid shop" },
+        { status: 400 }
+      );
+    }
+
+    if (productId.length > 100) {
+      return corsJson(
+        { error: "Invalid product ID" },
+        { status: 400 }
+      );
+    }
+
+    if (authorName.length > 100) {
+      return corsJson(
+        { error: "Name must be 100 characters or less" },
+        { status: 400 }
+      );
+    }
+
+    if (questionText.length < 3) {
+      return corsJson(
+        { error: "Question is too short" },
+        { status: 400 }
+      );
+    }
+
+    if (questionText.length > 2000) {
+      return corsJson(
+        { error: "Question must be 2000 characters or less" },
+        { status: 400 }
       );
     }
 
     const question = await db.question.create({
       data: {
         shop,
-        productId: String(productId),
-        authorName:
-          typeof authorName === "string"
-            ? authorName.slice(0, 100)
-            : "Anonymous",
-        questionText: questionText.trim(),
+        productId,
+        authorName: authorName || "Anonymous",
+        questionText,
         status: "pending",
       },
     });
 
-    return json(
+    return corsJson(
       {
         ok: true,
         questionId: question.id,
       },
       {
         status: 201,
-        headers: CORS_HEADERS,
       }
     );
   } catch (error) {
-    console.error("Question API error:", error);
+    console.error("Question creation error:", error);
 
-    return json(
+    return corsJson(
       { error: "Unable to submit question" },
-      {
-        status: 500,
-        headers: CORS_HEADERS,
-      }
+      { status: 500 }
     );
   }
 }

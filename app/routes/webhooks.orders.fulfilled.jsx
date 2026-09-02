@@ -1,44 +1,98 @@
 import { authenticate } from "../shopify.server";
 import db from "../db.server";
 
-// How many days to wait after fulfillment before sending the review request
 const DELAY_DAYS = 7;
 
 export const action = async ({ request }) => {
-  const { shop, payload } = await authenticate.webhook(request);
+  const { shop, payload } =
+    await authenticate.webhook(request);
 
-  // payload is the Shopify Order object (since topic = orders/fulfilled)
-  const order = payload;
+  try {
+    const order = payload;
 
-  const customerEmail = order.email || order.customer?.email;
-  const customerName =
-    order.customer?.first_name || order.shipping_address?.first_name || "there";
+    const customerEmail =
+      order.email ||
+      order.customer?.email ||
+      order.shipping_address?.email;
 
-  if (!customerEmail) {
-    // No email to send to, nothing to do
-    return new Response();
-  }
+    const customerName =
+      order.customer?.first_name ||
+      order.shipping_address?.first_name ||
+      "there";
 
-  const sendAfter = new Date();
-  sendAfter.setDate(sendAfter.getDate() + DELAY_DAYS);
+    if (!customerEmail) {
+      console.log(
+        `ReviewNest: order ${order.id} has no customer email`
+      );
 
-  const lineItems = order.line_items || [];
+      return new Response(null, { status: 204 });
+    }
 
-  for (const item of lineItems) {
-    if (!item.product_id) continue;
+    const orderId = String(order.id);
 
-    await db.reviewRequest.create({
-      data: {
-        shop,
-        orderId: String(order.id),
-        productId: String(item.product_id),
-        productTitle: item.title || "your recent purchase",
-        customerEmail,
-        customerName,
-        sendAfter,
-      },
+    const sendAfter = new Date();
+    sendAfter.setDate(
+      sendAfter.getDate() + DELAY_DAYS
+    );
+
+    const lineItems = order.line_items || [];
+
+    for (const item of lineItems) {
+      if (!item.product_id) {
+        continue;
+      }
+
+      const productId = String(item.product_id);
+
+      /*
+       * Prevent duplicate review requests when Shopify
+       * retries the webhook.
+       */
+      const existing =
+        await db.reviewRequest.findFirst({
+          where: {
+            shop,
+            orderId,
+            productId,
+          },
+        });
+
+      if (existing) {
+        console.log(
+          `ReviewNest: review request already exists for ${orderId}/${productId}`
+        );
+
+        continue;
+      }
+
+      await db.reviewRequest.create({
+        data: {
+          shop,
+          orderId,
+          productId,
+          productTitle:
+            item.title ||
+            "your recent purchase",
+          customerEmail,
+          customerName,
+          sendAfter,
+        },
+      });
+    }
+
+    return new Response(null, {
+      status: 204,
     });
-  }
+  } catch (error) {
+    console.error(
+      "ReviewNest orders/fulfilled webhook error:",
+      error
+    );
 
-  return new Response();
+    /*
+     * Throwing causes Shopify to retry the webhook,
+     * which is preferable to silently losing review requests.
+     */
+    throw error;
+  }
 };

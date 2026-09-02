@@ -45,6 +45,9 @@ model Review {
   imageUrl    String?
   videoUrl    String?
   createdAt   DateTime @default(now())
+
+  @@index([shop, productId, status, createdAt])
+  @@index([shop, createdAt])
 }
 model ShopSettings {
   shop        String   @id
@@ -54,18 +57,19 @@ model ShopSettings {
 }
 
 model ReviewRequest {
-  id          String   @id @default(cuid())
-  shop        String
-  orderId     String
-  productId   String
-  productTitle String
+  id            String   @id @default(cuid())
+  shop          String
+  orderId       String
+  productId     String
+  productTitle  String
   customerEmail String
   customerName  String
-  sendAfter   DateTime   // when it's eligible to send
-  sentAt      DateTime?  // null = not sent yet
-  createdAt   DateTime @default(now())
+  sendAfter     DateTime
+  sentAt        DateTime?
+  createdAt     DateTime @default(now())
 
   @@index([shop, sentAt, sendAfter])
+  @@index([shop, orderId, productId])
 }
 
 model Question {

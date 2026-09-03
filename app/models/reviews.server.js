@@ -15,8 +15,20 @@ export async function getApprovedReviewsForProduct(shop, productId) {
   });
 }
 
-export async function createReview({ shop, productId, authorName, rating, title, body, imageUrl }) {
-  const uploadedImageUrl = await uploadBase64ToR2(imageUrl, `${shop}/reviews/images`);
+export async function createReview({
+  shop,
+  productId,
+  authorName,
+  rating,
+  title,
+  body,
+  imageUrl,
+  autoApprove = false,
+}) {
+  const uploadedImageUrl = await uploadBase64ToR2(
+    imageUrl,
+    `${shop}/reviews/images`
+  );
 
   return db.review.create({
     data: {
@@ -26,7 +38,7 @@ export async function createReview({ shop, productId, authorName, rating, title,
       rating,
       title,
       body,
-      status: "pending",
+      status: autoApprove ? "approved" : "pending",
       imageUrl: uploadedImageUrl,
     },
   });
@@ -45,17 +57,40 @@ export async function getAverageRating(shop, productId) {
   const sum = reviews.reduce((acc, r) => acc + r.rating, 0);
   return { average: sum / reviews.length, count: reviews.length };
 }
-
 export async function getShopSettings(shop) {
-  const existing = await db.shopSettings.findUnique({ where: { shop } });
+  const existing = await db.shopSettings.findUnique({
+    where: { shop },
+  });
+
   if (existing) return existing;
-  return { shop, allowPhoto: false, allowVideo: false, plan: "starter" };
+
+  return {
+    shop,
+    allowPhoto: false,
+    allowVideo: false,
+    autoApprove: false,
+    plan: "starter",
+  };
 }
 
-export async function updateShopSettings(shop, { allowPhoto, allowVideo, plan }) {
+export async function updateShopSettings(
+  shop,
+  { allowPhoto, allowVideo, autoApprove, plan }
+) {
   return db.shopSettings.upsert({
     where: { shop },
-    update: { allowPhoto, allowVideo, plan },
-    create: { shop, allowPhoto, allowVideo, plan: plan || "starter" },
+    update: {
+      allowPhoto,
+      allowVideo,
+      autoApprove,
+      plan,
+    },
+    create: {
+      shop,
+      allowPhoto,
+      allowVideo,
+      autoApprove,
+      plan: plan || "starter",
+    },
   });
 }

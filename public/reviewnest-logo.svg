@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <rect width="1024" height="1024" rx="190" fill="#ffffff"/>
+
+  <g transform="translate(0 10)">
+    <path fill="#0f704d"
+      d="M512 170l55 150h158c31 0 44 39 19 57L615 470l45 154c9 31-27 55-53 37l-95-66-95 66c-26 18-62-6-53-37l45-154-129-93c-25-18-12-57 19-57h158z"/>
+
+    <path fill="#e2ad3d"
+      d="M512 251l32 87h91c24 0 34 30 15 44l-74 54 26 89c7 22-19 39-38 26l-52-36-52 36c-19 13-45-4-38-26l26-89-74-54c-19-14-9-44 15-44h91z"/>
+
+    <g fill="none" stroke-linecap="round" stroke-width="18">
+      <path stroke="#e2ad3d"
+        d="M282 475c5 73 70 105 150 128 42 12 65 30 80 47M742 475c-5 73-70 105-150 128-42 12-65 30-80 47"/>
+      <path stroke="#0f704d"
+        d="M274 520c30 92 111 136 238 169M750 520c-30 92-111 136-238 169M300 582c51 72 123 107 212 111M724 582c-51 72-123 107-212 111"/>
+    </g>
+
+    <g fill="#0f704d">
+      <path d="M320 497c-38-23-48-54-37-86 31 17 44 46 37 86z"/>
+      <path d="M704 497c38-23 48-54 37-86-31 17-44 46-37 86z"/>
+      <path d="M354 553c-43-4-72-25-84-58 37-1 69 20 84 58z"/>
+      <path d="M670 553c43-4 72-25 84-58-37-1-69 20-84 58z"/>
+    </g>
+  </g>
+
+  <text x="512" y="820"
+        text-anchor="middle"
+        font-family="Arial, Helvetica, sans-serif"
+        font-size="78"
+        font-weight="700"
+        letter-spacing="-3">
+    <tspan fill="#0f704d">Review</tspan><tspan fill="#e2ad3d">Nest</tspan>
+  </text>
+</svg>

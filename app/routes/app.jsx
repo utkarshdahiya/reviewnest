@@ -1,4 +1,4 @@
-import { Outlet, useLoaderData, useRouteError } from "react-router";
+import { Outlet, useLoaderData, useRouteError, Link } from "react-router";
 import { boundary } from "@shopify/shopify-app-react-router/server";
 import { AppProvider as PolarisAppProvider } from "@shopify/polaris";
 import "@shopify/polaris/build/esm/styles.css";
@@ -18,6 +18,34 @@ export default function App() {
   return (
     <AppProvider embedded apiKey={apiKey}>
       <PolarisAppProvider i18n={{}}>
+        <div
+  style={{
+    display: "flex",
+    alignItems: "center",
+    padding: "12px 20px",
+    borderBottom: "1px solid #e5e7eb",
+    background: "#ffffff",
+  }}
+>
+  <Link
+    to="/app"
+    style={{
+      display: "flex",
+      alignItems: "center",
+      textDecoration: "none",
+    }}
+  >
+    <img
+      src="/reviewnest-logo.svg"
+      alt="ReviewNest"
+      style={{
+        width: "150px",
+        height: "auto",
+        display: "block",
+      }}
+    />
+  </Link>
+</div>
         <s-app-nav>
           <s-link href="/app">Home</s-link>
           <s-link href="/app/questions">Questions</s-link>

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useLoaderData, useFetcher } from "react-router";
+import { useFetcher, useLoaderData, useSubmit } from "react-router";
 import {
   Page,
   Layout,
@@ -94,12 +94,13 @@ export const loader = async ({ request }) => {
       productCollection: productMap[r.productId]?.collection || null,
     }));
 
-    return { 
-      reviews: reviewsWithProduct,
-      reviewCount,
-      plan: currentPlan,
-      limitReached 
-    };
+    return {
+  reviews: reviewsWithProduct,
+  reviewCount,
+  plan: currentPlan,
+  limitReached,
+  autoApprove: Boolean(settings.autoApprove),
+};
   } catch (error) {
     console.error("🔥 Loader error:", error);
     return new Response(
@@ -119,6 +120,34 @@ export const action = async ({ request }) => {
       data = Object.fromEntries(formData.entries());
     }
     const { session } = await authenticate.admin(request);
+    if (data.actionType === "setAutoApprove") {
+  const autoApprove =
+    data.autoApprove === true || data.autoApprove === "true";
+
+  await db.shopSettings.upsert({
+    where: { shop: session.shop },
+    update: { autoApprove },
+    create: {
+      shop: session.shop,
+      allowPhoto: false,
+      allowVideo: false,
+      autoApprove,
+      plan: "starter",
+    },
+  });
+
+  return new Response(
+    JSON.stringify({
+      ok: true,
+      autoApprove,
+    }),
+    {
+      headers: {
+        "Content-Type": "application/json",
+      },
+    }
+  );
+}
     let id = data.id;
     const actionType = data.actionType;
     if (!id || !actionType) {
@@ -400,8 +429,17 @@ function ReviewsTable({ reviews, onStatusChange }) {
 }
 
 export default function ReviewsPage() {
-  const { reviews: initialReviews, reviewCount, plan, limitReached } = useLoaderData();
-  const [reviews, setReviews] = useState(initialReviews);
+  const {
+  reviews: initialReviews,
+  reviewCount,
+  plan,
+  limitReached,
+  autoApprove: initialAutoApprove,
+} = useLoaderData();
+
+const [reviews, setReviews] = useState(initialReviews);
+const [autoApprove, setAutoApprove] = useState(initialAutoApprove);
+const fetcher = useFetcher();
   const [selectedTab, setSelectedTab] = useState(0);
   const tabs = [
     { id: "all", content: "All" },
@@ -441,6 +479,63 @@ export default function ReviewsPage() {
     <Page title="Product Reviews" subtitle="Manage and moderate customer feedback">
       <BlockStack gap="400">
         {limitReached && (
+      <Card>
+  <BlockStack gap="300">
+    <BlockStack gap="100">
+      <Text as="h2" variant="headingMd">
+        Review settings
+      </Text>
+
+      <Text as="p" variant="bodySm" tone="subdued">
+        Choose whether new customer reviews require manual approval.
+      </Text>
+    </BlockStack>
+
+    <InlineStack align="space-between" blockAlign="center">
+      <BlockStack gap="050">
+        <Text as="p" fontWeight="semibold">
+          Automatically approve new reviews
+        </Text>
+
+        <Text as="p" variant="bodySm" tone="subdued">
+          When enabled, new reviews are published immediately without manual moderation.
+        </Text>
+      </BlockStack>
+
+      <Button
+        pressed={autoApprove}
+        variant={autoApprove ? "primary" : "secondary"}
+        onClick={() => {
+          const nextValue = !autoApprove;
+
+          setAutoApprove(nextValue);
+
+          fetcher.submit(
+            {
+              actionType: "setAutoApprove",
+              autoApprove: String(nextValue),
+            },
+            {
+              method: "post",
+              encType: "application/x-www-form-urlencoded",
+            }
+          );
+        }}
+        loading={fetcher.state !== "idle"}
+      >
+        {autoApprove ? "Enabled" : "Disabled"}
+      </Button>
+    </InlineStack>
+
+    {autoApprove && (
+      <Text as="p" variant="bodySm" tone="success">
+        New reviews will be approved automatically.
+      </Text>
+    )}
+  </BlockStack>
+</Card>
+
+<Layout>
           <Card backgroundColor="bg-surface-warning">
             <BlockStack gap="200">
               <p><strong>⚠️ Review Limit Reached!</strong></p>

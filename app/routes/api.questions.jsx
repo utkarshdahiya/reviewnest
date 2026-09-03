@@ -1,4 +1,4 @@
-import { json } from "react-router";
+
 import db from "../db.server";
 
 const CORS_HEADERS = {
@@ -8,7 +8,7 @@ const CORS_HEADERS = {
 };
 
 function corsJson(data, init = {}) {
-  return json(data, {
+  return new Response(JSON.stringify(data), {
     ...init,
     headers: {
       "Content-Type": "application/json",

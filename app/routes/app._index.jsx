@@ -478,32 +478,28 @@ const fetcher = useFetcher();
   return (
     <Page title="Product Reviews" subtitle="Manage and moderate customer feedback">
       <BlockStack gap="400">
-        {limitReached && (
-      <Card>
+        <Card>
   <BlockStack gap="300">
-    <BlockStack gap="100">
-      <Text as="h2" variant="headingMd">
-        Review settings
-      </Text>
+    <Text as="h2" variant="headingMd">
+      Review settings
+    </Text>
 
-      <Text as="p" variant="bodySm" tone="subdued">
-        Choose whether new customer reviews require manual approval.
-      </Text>
-    </BlockStack>
+    <Text as="p" variant="bodySm" tone="subdued">
+      Choose how new customer reviews are handled.
+    </Text>
 
     <InlineStack align="space-between" blockAlign="center">
-      <BlockStack gap="050">
+      <BlockStack gap="100">
         <Text as="p" fontWeight="semibold">
           Automatically approve new reviews
         </Text>
 
         <Text as="p" variant="bodySm" tone="subdued">
-          When enabled, new reviews are published immediately without manual moderation.
+          Automatically publish new reviews without manual approval.
         </Text>
       </BlockStack>
 
       <Button
-        pressed={autoApprove}
         variant={autoApprove ? "primary" : "secondary"}
         onClick={() => {
           const nextValue = !autoApprove;
@@ -526,24 +522,8 @@ const fetcher = useFetcher();
         {autoApprove ? "Enabled" : "Disabled"}
       </Button>
     </InlineStack>
-
-    {autoApprove && (
-      <Text as="p" variant="bodySm" tone="success">
-        New reviews will be approved automatically.
-      </Text>
-    )}
   </BlockStack>
 </Card>
-
-<Layout>
-          <Card backgroundColor="bg-surface-warning">
-            <BlockStack gap="200">
-              <p><strong>⚠️ Review Limit Reached!</strong></p>
-              <p>You've reached the limit of 10 reviews for the Starter plan. Upgrade to Pro for unlimited reviews and no branding!</p>
-              <Button variant="primary">Upgrade to Pro</Button>
-            </BlockStack>
-          </Card>
-        )}
         <Layout>
           <Layout.Section variant="oneThird">
             <StatCard label="Total reviews" value={reviews.length} emoji="📥" bg="#DFF3E8" />

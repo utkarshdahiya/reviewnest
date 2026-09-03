@@ -53,6 +53,7 @@ model ShopSettings {
   shop        String   @id
   allowPhoto  Boolean  @default(false)
   allowVideo  Boolean  @default(false)
+  autoApprove Boolean  @default(false)
   plan        String   @default("starter")
 }
 

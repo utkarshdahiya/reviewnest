@@ -476,7 +476,26 @@ const fetcher = useFetcher();
   };
 
   return (
-    <Page title="Product Reviews" subtitle="Manage and moderate customer feedback">
+    <Page
+  title={
+    <InlineStack gap="200" blockAlign="center">
+      <img
+        src="/reviewnest-logo.png"
+        alt="ReviewNest"
+        style={{
+          width: "42px",
+          height: "42px",
+          objectFit: "contain",
+          borderRadius: "10px",
+        }}
+      />
+      <Text as="h1" variant="headingLg">
+        ReviewNest
+      </Text>
+    </InlineStack>
+  }
+  subtitle="Manage and moderate customer feedback"
+>
       <BlockStack gap="400">
         <Card>
   <BlockStack gap="300">

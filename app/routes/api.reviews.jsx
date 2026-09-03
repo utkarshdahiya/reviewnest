@@ -230,14 +230,15 @@ export async function action({ request }) {
      * text for the same product.
      */
     const review = await createReview({
-      shop,
-      productId,
-      authorName,
-      rating,
-      title: title || null,
-      body,
-      imageUrl,
-    });
+  shop,
+  productId,
+  authorName,
+  rating,
+  title: title || null,
+  body,
+  imageUrl,
+  autoApprove: Boolean(settings?.autoApprove),
+});
 
     return jsonResponse(
       {

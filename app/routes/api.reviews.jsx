@@ -204,6 +204,19 @@ export async function action({ request }) {
     }
 
     const settings = await getShopSettings(shop);
+    const reviewCount = await db.review.count({
+  where: { shop },
+});
+
+if (!settings?.specialAccess && reviewCount >= 10) {
+  return jsonResponse(
+    {
+      error:
+        "You’ve reached your 10-review free limit. New reviews are temporarily paused. Contact ReviewNest for additional access.",
+    },
+    403
+  );
+}
 
     /*
      * Keep the existing plan restriction.

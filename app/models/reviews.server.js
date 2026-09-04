@@ -65,17 +65,18 @@ export async function getShopSettings(shop) {
   if (existing) return existing;
 
   return {
-    shop,
-    allowPhoto: false,
-    allowVideo: false,
-    autoApprove: false,
-    plan: "starter",
-  };
+  shop,
+  allowPhoto: false,
+  allowVideo: false,
+  autoApprove: false,
+  specialAccess: false,
+  plan: "starter",
+};
 }
 
 export async function updateShopSettings(
   shop,
-  { allowPhoto, allowVideo, autoApprove, plan }
+  { allowPhoto, allowVideo, autoApprove, specialAccess, plan }
 ) {
   return db.shopSettings.upsert({
     where: { shop },
@@ -83,6 +84,7 @@ export async function updateShopSettings(
       allowPhoto,
       allowVideo,
       autoApprove,
+      specialAccess,
       plan,
     },
     create: {
@@ -90,6 +92,7 @@ export async function updateShopSettings(
       allowPhoto,
       allowVideo,
       autoApprove,
+      specialAccess: Boolean(specialAccess),
       plan: plan || "starter",
     },
   });

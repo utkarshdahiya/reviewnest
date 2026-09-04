@@ -50,11 +50,12 @@ model Review {
   @@index([shop, createdAt])
 }
 model ShopSettings {
-  shop        String   @id
-  allowPhoto  Boolean  @default(false)
-  allowVideo  Boolean  @default(false)
-  autoApprove Boolean  @default(false)
-  plan        String   @default("starter")
+  shop          String   @id
+  allowPhoto    Boolean  @default(false)
+  allowVideo    Boolean  @default(false)
+  autoApprove   Boolean  @default(false)
+  specialAccess Boolean  @default(false)
+  plan          String   @default("starter")
 }
 
 model ReviewRequest {

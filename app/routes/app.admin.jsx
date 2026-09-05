@@ -1,5 +1,4 @@
 import { useFetcher, useLoaderData } from "react-router";
-import { useFetcher, useLoaderData } from "react-router";
 import {
   Page,
   Card,

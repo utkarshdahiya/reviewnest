@@ -6,15 +6,17 @@ import { AppProvider } from "@shopify/shopify-app-react-router/react";
 import { authenticate } from "../shopify.server";
 
 export const loader = async ({ request }) => {
-  await authenticate.admin(request);
+  const { session } = await authenticate.admin(request);
 
   // eslint-disable-next-line no-undef
-  return { apiKey: process.env.SHOPIFY_API_KEY || "" };
+  return {
+    apiKey: process.env.SHOPIFY_API_KEY || "",
+    isOwner: session.shop === "reviewnest-dev.myshopify.com",
+  };
 };
 
 export default function App() {
-  const { apiKey } = useLoaderData();
-
+  const { apiKey, isOwner } = useLoaderData();
   return (
     <AppProvider embedded apiKey={apiKey}>
       <PolarisAppProvider i18n={{}}>
@@ -51,6 +53,7 @@ export default function App() {
           <s-link href="/app/questions">Questions</s-link>
           <s-link href="/app/additional">Additional page</s-link>
           <s-link href="/app/billing">Billing</s-link>
+          {isOwner && <s-link href="/app/admin">Admin</s-link>}
         </s-app-nav>
         <Outlet />
       </PolarisAppProvider>

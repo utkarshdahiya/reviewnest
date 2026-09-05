@@ -1,5 +1,3 @@
-import { useState } from "react";
-import { useLoaderData, useFetcher } from "react-router";
 import {
   Page,
   Layout,
@@ -7,143 +5,116 @@ import {
   BlockStack,
   InlineStack,
   Text,
-  Button,
+  Badge,
   Banner,
+  Divider,
 } from "@shopify/polaris";
 import { authenticate } from "../shopify.server";
-import db from "../db.server";
 
 export const loader = async ({ request }) => {
-  try {
-    const { session } = await authenticate.admin(request);
-    const settings = await db.shopSettings.findUnique({
-      where: { shop: session.shop },
-    }) || { plan: "starter" };
+  const { session } = await authenticate.admin(request);
 
-    return {
-      shop: session.shop,
-      currentPlan: settings.plan || "starter",
-    };
-  } catch (error) {
-    return new Response("Authentication failed", { status: 401 });
-  }
+  return {
+    shop: session.shop,
+  };
 };
 
-export const action = async ({ request }) => {
-  try {
-    const formData = await request.formData();
-    const plan = formData.get("plan");
-    const { session } = await authenticate.admin(request);
+function Feature({ children }) {
+  return (
+    <InlineStack gap="200" blockAlign="center">
+      <Text as="span" variant="bodyMd">
+        ✓
+      </Text>
+      <Text as="span" variant="bodyMd">
+        {children}
+      </Text>
+    </InlineStack>
+  );
+}
 
-    if (!plan) {
-      return new Response("Missing plan", { status: 400 });
-    }
-
-    await db.shopSettings.upsert({
-      where: { shop: session.shop },
-      update: { plan },
-      create: { shop: session.shop, plan },
-    });
-
-    return new Response(JSON.stringify({ ok: true, plan }), {
-      headers: { "Content-Type": "application/json" },
-    });
-  } catch (error) {
-    return new Response(JSON.stringify({ error: error.message }), { status: 500 });
-  }
-};
-
-function PricingCard({ plan, price, features, isCurrentPlan, onSelect }) {
+function PricingCard({
+  title,
+  price,
+  subtitle,
+  features,
+  featured,
+}) {
   return (
     <Card>
-      <BlockStack gap="300">
-        <BlockStack gap="100">
-          <Text as="h3" variant="headingMd">{plan}</Text>
-          <InlineStack gap="100" blockAlign="baseline">
-            <Text as="p" variant="headingLgl">${price}</Text>
-            <Text as="p" variant="bodySm" tone="subdued">/ month</Text>
-          </InlineStack>
-        </BlockStack>
-
-        <BlockStack gap="200">
-          {features.map((feature, i) => (
-            <InlineStack key={i} gap="200" blockAlign="center">
-              <div style={{ color: BRAND_GREEN }}>✓</div>
-              <Text as="p" variant="bodyMd">{feature}</Text>
+      <BlockStack gap="400">
+        <InlineStack align="space-between" blockAlign="start">
+          <BlockStack gap="100">
+            <Text as="h2" variant="headingLg">
+              {title}
+            </Text>
+            <InlineStack gap="100" blockAlign="baseline">
+              <Text as="p" variant="headingXl">
+                {price}
+              </Text>
+              {subtitle && (
+                <Text as="span" tone="subdued">
+                  {subtitle}
+                </Text>
+              )}
             </InlineStack>
+          </BlockStack>
+
+          {featured && <Badge tone="success">Best value</Badge>}
+        </InlineStack>
+
+        <Divider />
+
+        <BlockStack gap="250">
+          {features.map((feature) => (
+            <Feature key={feature}>{feature}</Feature>
           ))}
         </BlockStack>
-
-        <Button
-          variant={isCurrentPlan ? "secondary" : "primary"}
-          disabled={isCurrentPlan}
-          onClick={() => onSelect(plan)}
-        >
-          {isCurrentPlan ? "Current Plan" : "Choose Plan"}
-        </Button>
       </BlockStack>
     </Card>
   );
 }
 
-const BRAND_GREEN = "#3F8A63";
-
 export default function BillingPage() {
-  const { currentPlan } = useLoaderData();
-  const fetcher = useFetcher();
-  const [isUpdating, setIsUpdating] = useState(false);
-
-  const handleSelectPlan = (plan) => {
-    setIsUpdating(true);
-    fetcher.submit(
-      { plan },
-      { method: "POST" }
-    );
-  };
-
-  // Listen for action completion
-  if (fetcher.state === "idle" && fetcher.data) {
-    // we would normally use a redirect or a state update here
-    // for simplicity in this demo, we'll just alert
-    if (fetcher.data.ok) {
-      alert(`Successfully upgraded to ${fetcher.data.plan}!`);
-      window.location.reload();
-    }
-  }
-
   return (
-    <Page title="Billing & Plans">
+    <Page title="Plans">
       <BlockStack gap="500">
         <Banner tone="info">
-          <p>Select a plan that fits your business. Your changes will be applied immediately to your review limits.</p>
+          <p>
+            Choose the plan that fits your store. Pricing shown below is for
+            ReviewNest and does not include a payment flow yet.
+          </p>
         </Banner>
 
         <Layout>
-          <Layout.Section variant="oneThird">
+          <Layout.Section variant="oneHalf">
             <PricingCard
-              plan="Starter"
-              price="0"
-              features={["First 10 reviews free", "Basic admin panel", "Standard support"]}
-              isCurrentPlan={currentPlan === "starter"}
-              onSelect={handleSelectPlan}
+              title="Free"
+              price="$0"
+              subtitle="forever"
+              features={[
+                "First 10 reviews",
+                "Review collection",
+                "Review widget/display",
+                "Basic moderation",
+                "Photo reviews",
+                "Auto Approval",
+              ]}
             />
           </Layout.Section>
-          <Layout.Section variant="oneThird">
+
+          <Layout.Section variant="oneHalf">
             <PricingCard
-              plan="Pro"
-              price="4.99"
-              features={["Unlimited reviews", "Remove Branding", "Photo reviews", "Priority support"]}
-              isCurrentPlan={currentPlan === "pro"}
-              onSelect={handleSelectPlan}
-            />
-          </Layout.Section>
-          <Layout.Section variant="oneThird">
-            <PricingCard
-              plan="Elite"
-              price="9.99"
-              features={["Everything in Pro", "Bulk CSV Imports", "Custom themes", "Dedicated account manager"]}
-              isCurrentPlan={currentPlan === "elite"}
-              onSelect={handleSelectPlan}
+              title="Growth Lifetime"
+              price="$19"
+              subtitle="one-time"
+              featured
+              features={[
+                "Unlimited reviews",
+                "Photo reviews",
+                "Remove ReviewNest branding",
+                "Lifetime access",
+                "No monthly subscription",
+              ]}
             />
           </Layout.Section>
         </Layout>

@@ -14,8 +14,10 @@ async function requireOwner(request) {
   return session;
 }
 
-export async function loader() {
-  return new Response(null, { status: 204 });
+export async function loader({ request }) {
+  const url = new URL(request.url);
+
+  return redirect(`/app/admin${url.search}`);
 }
 
 export async function action({ request }) {

@@ -1,4 +1,4 @@
-import { useFetcher, useLoaderData } from "react-router";
+import { Form, useLoaderData } from "react-router";
 import {
   Page,
   Card,
@@ -75,18 +75,7 @@ export const action = async ({ request }) => {
     String(formData.get("specialAccess") || "") === "true";
 
   if (!shop) {
-    return new Response(
-      JSON.stringify({
-        ok: false,
-        error: "Missing shop.",
-      }),
-      {
-        status: 400,
-        headers: {
-          "Content-Type": "application/json",
-        },
-      }
-    );
+    throw new Response("Missing shop.", { status: 400 });
   }
 
   const shopExists = await db.session.findFirst({
@@ -95,18 +84,7 @@ export const action = async ({ request }) => {
   });
 
   if (!shopExists) {
-    return new Response(
-      JSON.stringify({
-        ok: false,
-        error: "Store not found.",
-      }),
-      {
-        status: 404,
-        headers: {
-          "Content-Type": "application/json",
-        },
-      }
-    );
+    throw new Response("Store not found.", { status: 404 });
   }
 
   await db.shopSettings.upsert({
@@ -124,27 +102,16 @@ export const action = async ({ request }) => {
     },
   });
 
-  return new Response(
-    JSON.stringify({
-      ok: true,
-      shop,
-      specialAccess,
-    }),
-    {
-      headers: {
-        "Content-Type": "application/json",
-      },
-    }
-  );
+  return new Response(null, {
+    status: 303,
+    headers: {
+      Location: "/app/admin",
+    },
+  });
 };
 
 export default function AdminPage() {
   const { shops } = useLoaderData();
-  const fetcher = useFetcher();
-
-  
-
-
 
   return (
     <Page
@@ -216,32 +183,25 @@ export default function AdminPage() {
                         </InlineStack>
                       </BlockStack>
 
-                      <fetcher.Form method="post">
-  <input
-    type="hidden"
-    name="shop"
-    value={store.shop}
-  />
+                      <Form method="post">
+                        <input
+                          type="hidden"
+                          name="shop"
+                          value={store.shop}
+                        />
 
-  <input
-    type="hidden"
-    name="specialAccess"
-    value={String(!store.specialAccess)}
-  />
+                        <input
+                          type="hidden"
+                          name="specialAccess"
+                          value={String(!store.specialAccess)}
+                        />
 
-  <Button
-    submit
-    variant={
-      store.specialAccess
-        ? "secondary"
-        : "primary"
-    }
-  >
-    {store.specialAccess
-      ? "Remove Special Access"
-      : "Grant Special Access"}
-  </Button>
-</fetcher.Form>
+                        <Button submit>
+                          {store.specialAccess
+                            ? "Remove Special Access"
+                            : "Grant Special Access"}
+                        </Button>
+                      </Form>
                     </InlineStack>
                   </Card>
                 ))}

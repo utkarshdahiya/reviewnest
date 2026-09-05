@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useFetcher, useLoaderData } from "react-router";
 import { useFetcher, useLoaderData } from "react-router";
 import {
   Page,
@@ -142,24 +142,10 @@ export const action = async ({ request }) => {
 export default function AdminPage() {
   const { shops } = useLoaderData();
   const fetcher = useFetcher();
-  const [updatingShop, setUpdatingShop] = useState(null);
 
-  const handleAccessChange = (shop, currentValue) => {
-    setUpdatingShop(shop);
+  
 
-    fetcher.submit(
-      {
-        shop,
-        specialAccess: String(!currentValue),
-      },
-      {
-        method: "post",
-      }
-    );
-  };
 
-  const isSaving =
-    fetcher.state !== "idle" && updatingShop !== null;
 
   return (
     <Page
@@ -231,27 +217,32 @@ export default function AdminPage() {
                         </InlineStack>
                       </BlockStack>
 
-                      <Button
-                        variant={
-                          store.specialAccess
-                            ? "secondary"
-                            : "primary"
-                        }
-                        loading={
-                          isSaving &&
-                          updatingShop === store.shop
-                        }
-                        onClick={() =>
-                          handleAccessChange(
-                            store.shop,
-                            store.specialAccess
-                          )
-                        }
-                      >
-                        {store.specialAccess
-                          ? "Remove Special Access"
-                          : "Grant Special Access"}
-                      </Button>
+                      <fetcher.Form method="post">
+  <input
+    type="hidden"
+    name="shop"
+    value={store.shop}
+  />
+
+  <input
+    type="hidden"
+    name="specialAccess"
+    value={String(!store.specialAccess)}
+  />
+
+  <Button
+    submit
+    variant={
+      store.specialAccess
+        ? "secondary"
+        : "primary"
+    }
+  >
+    {store.specialAccess
+      ? "Remove Special Access"
+      : "Grant Special Access"}
+  </Button>
+</fetcher.Form>
                     </InlineStack>
                   </Card>
                 ))}

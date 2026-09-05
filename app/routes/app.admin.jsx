@@ -183,7 +183,10 @@ export default function AdminPage() {
                         </InlineStack>
                       </BlockStack>
 
-                      <Form method="post">
+                      <Form
+  method="post"
+  action="/api/admin/special-access"
+>
                         <input
                           type="hidden"
                           name="shop"

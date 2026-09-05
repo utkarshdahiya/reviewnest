@@ -4,12 +4,22 @@ import db from "../db.server";
 
 const ADMIN_SHOP = "reviewnest-dev.myshopify.com";
 
-export async function action({ request }) {
+async function requireOwner(request) {
   const { session } = await authenticate.admin(request);
 
   if (session.shop !== ADMIN_SHOP) {
     throw new Response("Not Found", { status: 404 });
   }
+
+  return session;
+}
+
+export async function loader() {
+  return new Response(null, { status: 204 });
+}
+
+export async function action({ request }) {
+  await requireOwner(request);
 
   const formData = await request.formData();
 
@@ -48,5 +58,5 @@ export async function action({ request }) {
     },
   });
 
-  return redirect("/app/admin");
+  return redirect(`/app/admin${new URL(request.url).search}`);
 }

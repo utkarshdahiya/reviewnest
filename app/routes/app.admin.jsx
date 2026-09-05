@@ -1,4 +1,4 @@
-import { Form, useLoaderData } from "react-router";
+import { useLoaderData, useLocation } from "react-router";
 import {
   Page,
   Card,
@@ -62,56 +62,11 @@ export const loader = async ({ request }) => {
   };
 };
 
-export const action = async ({ request }) => {
-  await requireOwner(request);
-
-  const formData = await request.formData();
-
-  const shop = String(formData.get("shop") || "")
-    .trim()
-    .toLowerCase();
-
-  const specialAccess =
-    String(formData.get("specialAccess") || "") === "true";
-
-  if (!shop) {
-    throw new Response("Missing shop.", { status: 400 });
-  }
-
-  const shopExists = await db.session.findFirst({
-    where: { shop },
-    select: { shop: true },
-  });
-
-  if (!shopExists) {
-    throw new Response("Store not found.", { status: 404 });
-  }
-
-  await db.shopSettings.upsert({
-    where: { shop },
-    update: {
-      specialAccess,
-    },
-    create: {
-      shop,
-      allowPhoto: false,
-      allowVideo: false,
-      autoApprove: false,
-      specialAccess,
-      plan: "starter",
-    },
-  });
-
-  return new Response(null, {
-    status: 303,
-    headers: {
-      Location: "/app/admin",
-    },
-  });
-};
-
 export default function AdminPage() {
   const { shops } = useLoaderData();
+  const location = useLocation();
+
+  const actionUrl = `/api/admin/special-access${location.search}`;
 
   return (
     <Page
@@ -183,10 +138,7 @@ export default function AdminPage() {
                         </InlineStack>
                       </BlockStack>
 
-                      <Form
-  method="post"
-  action="/api/admin/special-access"
->
+                      <form method="post" action={actionUrl}>
                         <input
                           type="hidden"
                           name="shop"
@@ -204,7 +156,7 @@ export default function AdminPage() {
                             ? "Remove Special Access"
                             : "Grant Special Access"}
                         </Button>
-                      </Form>
+                      </form>
                     </InlineStack>
                   </Card>
                 ))}
@@ -216,3 +168,4 @@ export default function AdminPage() {
     </Page>
   );
 }
+EOF

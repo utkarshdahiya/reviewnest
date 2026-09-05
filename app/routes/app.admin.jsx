@@ -6,7 +6,6 @@ import {
   InlineStack,
   Text,
   Badge,
-  Button,
   Banner,
   Divider,
 } from "@shopify/polaris";
@@ -196,11 +195,22 @@ export default function AdminPage() {
                           value={String(!store.specialAccess)}
                         />
 
-                        <Button submit>
-                          {store.specialAccess
-                            ? "Remove Special Access"
-                            : "Grant Special Access"}
-                        </Button>
+                        <button
+  type="submit"
+  style={{
+    padding: "8px 16px",
+    border: "1px solid #202223",
+    borderRadius: "6px",
+    background: "#202223",
+    color: "#ffffff",
+    cursor: "pointer",
+    fontWeight: 600,
+  }}
+>
+  {store.specialAccess
+    ? "Remove Special Access"
+    : "Grant Special Access"}
+</button>
                       </form>
                     </InlineStack>
                   </Card>

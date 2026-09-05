@@ -1,4 +1,4 @@
-import { useLoaderData } from "react-router";
+import { useLoaderData, useLocation } from "react-router";
 import {
   Page,
   Card,
@@ -61,56 +61,32 @@ export const loader = async ({ request }) => {
   };
 };
 
-export const action = async ({ request }) => {
-  await requireOwner(request);
-
-  const formData = await request.formData();
-
-  const shop = String(formData.get("shop") || "")
-    .trim()
-    .toLowerCase();
-
-  const specialAccess =
-    String(formData.get("specialAccess") || "") === "true";
-
-  if (!shop) {
-    throw new Response("Missing shop.", { status: 400 });
-  }
-
-  const shopExists = await db.session.findFirst({
-    where: { shop },
-    select: { shop: true },
-  });
-
-  if (!shopExists) {
-    throw new Response("Store not found.", { status: 404 });
-  }
-
-  await db.shopSettings.upsert({
-    where: { shop },
-    update: {
-      specialAccess,
-    },
-    create: {
-      shop,
-      allowPhoto: false,
-      allowVideo: false,
-      autoApprove: false,
-      specialAccess,
-      plan: "starter",
-    },
-  });
-
-  return new Response(null, {
-    status: 303,
-    headers: {
-      Location: `/app/admin${new URL(request.url).search}`,
-    },
-  });
-};
-
 export default function AdminPage() {
   const { shops } = useLoaderData();
+  const location = useLocation();
+
+  async function toggleSpecialAccess(shop, specialAccess) {
+    const response = await fetch(
+      `/api/admin/special-access${location.search}`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: new URLSearchParams({
+          shop,
+          specialAccess: String(specialAccess),
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      const text = await response.text();
+      throw new Error(text || "Failed to update Special Access.");
+    }
+
+    window.location.reload();
+  }
 
   return (
     <Page
@@ -182,36 +158,28 @@ export default function AdminPage() {
                         </InlineStack>
                       </BlockStack>
 
-                      <form method="post">
-                        <input
-                          type="hidden"
-                          name="shop"
-                          value={store.shop}
-                        />
-
-                        <input
-                          type="hidden"
-                          name="specialAccess"
-                          value={String(!store.specialAccess)}
-                        />
-
-                        <button
-  type="submit"
-  style={{
-    padding: "8px 16px",
-    border: "1px solid #202223",
-    borderRadius: "6px",
-    background: "#202223",
-    color: "#ffffff",
-    cursor: "pointer",
-    fontWeight: 600,
-  }}
->
-  {store.specialAccess
-    ? "Remove Special Access"
-    : "Grant Special Access"}
-</button>
-                      </form>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          toggleSpecialAccess(
+                            store.shop,
+                            !store.specialAccess
+                          )
+                        }
+                        style={{
+                          padding: "8px 16px",
+                          border: "1px solid #202223",
+                          borderRadius: "6px",
+                          background: "#202223",
+                          color: "#ffffff",
+                          cursor: "pointer",
+                          fontWeight: 600,
+                        }}
+                      >
+                        {store.specialAccess
+                          ? "Remove Special Access"
+                          : "Grant Special Access"}
+                      </button>
                     </InlineStack>
                   </Card>
                 ))}

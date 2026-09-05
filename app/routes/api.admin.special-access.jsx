@@ -60,5 +60,9 @@ export async function action({ request }) {
     },
   });
 
-  return redirect(`/app/admin${new URL(request.url).search}`);
+  return Response.json({
+    success: true,
+    shop,
+    specialAccess,
+  });
 }
